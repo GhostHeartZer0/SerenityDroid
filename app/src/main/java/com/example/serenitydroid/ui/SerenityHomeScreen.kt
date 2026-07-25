@@ -416,14 +416,16 @@ fun SystemControlsRow(
     onToggleDevice: () -> Unit,
     onToggleModel: () -> Unit
 ) {
-    var secretUnlocked by remember { mutableStateOf(false) }
+    var secretUnlocked by remember { mutableStateOf(selectedLevel == 6) }
     var draftLevel by remember(selectedLevel) { mutableStateOf(selectedLevel) }
 
-    // If level 6 is selected externally, we unlock it
     LaunchedEffect(selectedLevel) {
         if (selectedLevel == 6) secretUnlocked = true
     }
-    
+
+    val maxLevel = if (secretUnlocked || draftLevel == 6) 6f else 5f
+    val stepsCount = if (secretUnlocked || draftLevel == 6) 5 else 4
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -435,11 +437,23 @@ fun SystemControlsRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                if (draftLevel != selectedLevel) "LVL $draftLevel (PRESS LOAD)" else "CORE DEPTH: LVL $selectedLevel",
+                text = when {
+                    draftLevel != selectedLevel -> if (draftLevel == 0) "LVL 0 (OFFLOAD MODEL)" else "LVL $draftLevel (PRESS LOAD)"
+                    selectedLevel == 0 -> "CORE DEPTH: LVL 0 (OFFLOADED)"
+                    else -> "CORE DEPTH: LVL $selectedLevel"
+                },
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontFamily = FontFamily.Monospace,
                     color = if (draftLevel != selectedLevel) SerenityInference else SerenityAccent
-                )
+                ),
+                modifier = Modifier.pointerInput(Unit) {
+                    detectTapGestures(
+                        onDoubleTap = {
+                            secretUnlocked = true
+                            draftLevel = 6
+                        }
+                    )
+                }
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
@@ -452,7 +466,12 @@ fun SystemControlsRow(
                     modifier = Modifier.height(32.dp)
                 ) {
                     Text(
-                        if (draftLevel != selectedLevel) "LOAD LVL $draftLevel" else if (uiState.isModelLoaded) "RELOAD" else "LOAD MODEL",
+                        text = when {
+                            draftLevel != selectedLevel -> if (draftLevel == 0) "OFFLOAD" else "LOAD LVL $draftLevel"
+                            selectedLevel == 0 -> "OFFLOADED"
+                            uiState.isModelLoaded -> "RELOAD"
+                            else -> "LOAD MODEL"
+                        },
                         style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
                         color = if (draftLevel != selectedLevel) SerenityBackground else SerenityAccent
                     )
@@ -479,9 +498,15 @@ fun SystemControlsRow(
         }
         Slider(
             value = draftLevel.toFloat(),
-            onValueChange = { draftLevel = it.toInt() },
-            valueRange = 1f..(if (secretUnlocked) 7f else 5f),
-            steps = if (secretUnlocked) 5 else 3,
+            onValueChange = { value ->
+                val newLvl = value.toInt()
+                draftLevel = newLvl
+                if (newLvl != 6) {
+                    secretUnlocked = false
+                }
+            },
+            valueRange = 0f..maxLevel,
+            steps = stepsCount,
             colors = SliderDefaults.colors(
                 thumbColor = SerenityAccent,
                 activeTrackColor = SerenityAccent,

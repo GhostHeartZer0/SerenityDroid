@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Resolved Kotlin 2.0 parameter annotation warnings (`-Xannotation-default-target=param-property`) by using explicit `@param:ApplicationContext` in `ChatViewModel.kt` and `LiteRtManager.kt`.
+- Added double-tap gesture on `CORE DEPTH` text in `SerenityHomeScreen.kt` to unlock Level 6 (Cecilia). Level 6 automatically locks and hides when sliding away to other levels.
+- Added **Level 0** slider position (`0f`) to offload model and activate Level 0 error/unloaded persona state.
 - Added top-left Info button (`HardwareInfoDialog`) displaying system RAM usage, app heap memory, hardware acceleration mode, and verbose model details with a "BACK" button.
 - Added `App Profiling (Resource Monitor)` setting switch and chat screen overlay box displaying real-time memory usage and percentages upon interaction.
 - Integrated persona system prompts and descriptions from `serenity_resources.py` into `ChatViewModel.kt`.

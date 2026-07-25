@@ -52,7 +52,7 @@ data class UiState(
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val liteRtManager: LiteRtManager,
-    @ApplicationContext private val context: Context
+    @param:ApplicationContext private val context: Context
 ) : ViewModel() {
     companion object {
         private const val TAG = "ChatViewModel"
@@ -397,7 +397,12 @@ class ChatViewModel @Inject constructor(
         if (!isInitialLaunch) {
             addMessage(SenderType.SYSTEM, newPersona.description)
         }
-        loadModelForCurrentPersona()
+        if (level == 0) {
+            _uiState.update { it.copy(isModelLoaded = false, isModelLoading = false) }
+            updateModelStatusText()
+        } else {
+            loadModelForCurrentPersona()
+        }
     }
 
     private fun loadModelForCurrentPersona() {
