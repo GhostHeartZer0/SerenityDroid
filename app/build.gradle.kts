@@ -103,8 +103,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
-    // LiteRT-LM for on-device inference
+    // LiteRT-LM & Qualcomm QNN NPU Delegate for on-device inference
     implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+    implementation(libs.qnn.runtime)
+    implementation(libs.qnn.litert.delegate)
 
     // Jetpack Compose Dependencies
     val composeBom = platform("androidx.compose:compose-bom:2024.05.00")

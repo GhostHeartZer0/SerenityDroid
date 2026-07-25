@@ -21,7 +21,7 @@ materialVersion = "1.13.0"
 preferenceKtx = "1.2.1"
 recyclerview = "1.4.0"
 activityKtx = "1.11.0"
-recyclerviewVersion = "1.4.0"
+qnn = "2.34.0"
 
 
 
@@ -57,6 +57,8 @@ hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.r
 hilt-android-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesAndroid" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
+qnn-runtime = { module = "com.qualcomm.qti:qnn-runtime", version.ref = "qnn" }
+qnn-litert-delegate = { module = "com.qualcomm.qti:qnn-litert-delegate", version.ref = "qnn" }
 ksp = { module = "com.github.bumptech.glide:ksp", version.ref = "glide" }
 material = { module = "com.google.android.material:material", version.ref = "materialVersion" }
 material3 = { module = "androidx.compose.material3:material3" }

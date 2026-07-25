@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Integrated Qualcomm AI Engine Direct Delegate (`com.qualcomm.qti:qnn-runtime:2.34.0` and `com.qualcomm.qti:qnn-litert-delegate:2.34.0`) per `qualcommNPUsetup.md` for Snapdragon 8 Gen 1-3 & 8 Elite (SM8750) HTP NPU hardware acceleration.
+
 - Resolved Kotlin 2.0 parameter annotation warnings (`-Xannotation-default-target=param-property`) by using explicit `@param:ApplicationContext` in `ChatViewModel.kt` and `LiteRtManager.kt`.
 - Added double-tap gesture on `CORE DEPTH` text in `SerenityHomeScreen.kt` to unlock Level 6 (Cecilia) and Level 7 (The Transcendent One). Secret levels automatically lock and hide when sliding back to levels 0-5.
 - Added **Level 0** slider position (`0f`) to offload model and activate Level 0 error/unloaded persona state.
