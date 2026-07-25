@@ -416,15 +416,15 @@ fun SystemControlsRow(
     onToggleDevice: () -> Unit,
     onToggleModel: () -> Unit
 ) {
-    var secretUnlocked by remember { mutableStateOf(selectedLevel == 6) }
+    var secretUnlocked by remember { mutableStateOf(selectedLevel >= 6) }
     var draftLevel by remember(selectedLevel) { mutableStateOf(selectedLevel) }
 
     LaunchedEffect(selectedLevel) {
-        if (selectedLevel == 6) secretUnlocked = true
+        if (selectedLevel >= 6) secretUnlocked = true
     }
 
-    val maxLevel = if (secretUnlocked || draftLevel == 6) 6f else 5f
-    val stepsCount = if (secretUnlocked || draftLevel == 6) 5 else 4
+    val maxLevel = if (secretUnlocked || draftLevel >= 6) 7f else 5f
+    val stepsCount = if (secretUnlocked || draftLevel >= 6) 6 else 4
 
     Column(
         modifier = Modifier
@@ -501,7 +501,7 @@ fun SystemControlsRow(
             onValueChange = { value ->
                 val newLvl = value.toInt()
                 draftLevel = newLvl
-                if (newLvl != 6) {
+                if (newLvl < 6) {
                     secretUnlocked = false
                 }
             },
