@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory android:title="@string/pref_header_chat">
+
+        <SwitchPreferenceCompat
+            android:key="ephemeral_chat"
+            android:title="@string/pref_title_ephemeral_chat"
+            android:summary="@string/pref_summary_ephemeral_chat"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Models">
+        <ListPreference
+            android:key="selected_model"
+            android:title="Active Model"
+            android:summary="Select the active installed model (.gguf)"
+            android:entries="@array/empty"
+            android:entryValues="@array/empty" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

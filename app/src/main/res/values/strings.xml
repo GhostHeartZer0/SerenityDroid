@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Serenity AI</string>
+    <string name="load">Load</string>
+    <string name="begin">Begin!</string>
+    <string name="halt_lvl_0">Halt (Lvl 0)</string>
+    <string name="lite_mode">Lite Mode</string>
+    <string name="turbo_mode">Turbo Mode</string>
+    <string name="enter_message">Enter message...</string>
+    <string name="hurry_up">Hurry Up!</string>
+    <string name="stop_now">Stop Now</string>
+    <string name="send">Send</string>
+    <string name="reload_lvl">^.^ Reload Lvl ^.^</string>
+    <string name="persona_image_desc">Current Persona Image</string>
+    <string name="action_settings">Settings</string>
+    <!-- Settings Activity -->
+    <string name="title_activity_settings">Settings</string>
+    <string name="pref_header_chat">Chat</string>
+    <string name="pref_title_ephemeral_chat">Ephemeral Chat</string>
+    <string name="pref_summary_ephemeral_chat">History will vanish when the model is offloaded or the app closes</string>
+
+    <!-- Welcome Message -->
+    <string name="welcome_message">Welcome to SerenityPC, a purely local chatbot with 5 levels! To begin, select a Persona with the slider below and click "Start Chatting".</string>
+</resources>

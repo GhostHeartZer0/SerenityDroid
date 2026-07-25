@@ -1,0 +1,17 @@
+<resources>
+    <!-- Base application theme. -->
+    <style name="Theme.SerenityAI" parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Primary brand color. -->
+        <item name="colorPrimary">@color/electric_blue</item>
+        <item name="colorPrimaryVariant">@color/button_active_color</item>
+        <item name="colorOnPrimary">@color/bg_color</item>
+        <!-- Secondary brand color. -->
+        <item name="colorSecondary">@color/button_bg_color</item>
+        <item name="colorSecondaryVariant">@color/button_active_color</item>
+        <item name="colorOnSecondary">@color/fg_color</item>
+        <!-- Status bar color. -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <!-- Customize your theme here. -->
+        <item name="android:windowBackground">@color/bg_color</item>
+    </style>
+</resources>
