@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Version 1.4.20 Alpha - 2026-07-24
+
+### Added
+
+- Added top-left Info button (`HardwareInfoDialog`) displaying system RAM usage, app heap memory, hardware acceleration mode, and verbose model details with a "BACK" button.
+- Added `App Profiling (Resource Monitor)` setting switch and chat screen overlay box displaying real-time memory usage and percentages upon interaction.
+- Integrated persona system prompts and descriptions from `serenity_resources.py` into `ChatViewModel.kt`.
+- Added file existence, readability, and non-empty validation checks in `LiteRtManager.kt` before initializing native model engine.
+- Initialized Git repository and tagged version `v1.4.20-alpha`.
+
 ## Version 0.4.0 - 2026-07-24
 
 ### Added
