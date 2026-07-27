@@ -27,7 +27,8 @@ Java_com_example_serenityai_jni_LlamaAndroid_loadModel(
         JNIEnv *env,
         jobject /* this */,
         jstring model_path_jni,
-        jint n_gpu_layers
+        jint n_gpu_layers,
+        jstring mmproj_path_jni
 ) {
     std::lock_guard<std::mutex> lock(g_mutex);
     if (g_model != nullptr) {
@@ -42,6 +43,13 @@ Java_com_example_serenityai_jni_LlamaAndroid_loadModel(
     const char *model_path = env->GetStringUTFChars(model_path_jni, 0);
     g_model = llama_model_load_from_file(model_path, mparams);
     env->ReleaseStringUTFChars(model_path_jni, model_path);
+
+    if (mmproj_path_jni != nullptr) {
+        const char *mmproj_path = env->GetStringUTFChars(mmproj_path_jni, 0);
+        ANDROID_LOG_DEBUG((std::string("MMProj Path: ") + mmproj_path).c_str());
+        // TODO: clip_model_load(mmproj_path)
+        env->ReleaseStringUTFChars(mmproj_path_jni, mmproj_path);
+    }
 
     if (g_model == nullptr) {
         ANDROID_LOG_ERROR("Failed to load model");

@@ -26,6 +26,9 @@ target_link_libraries(serenity_llama
     log
 )
 
+# Enable 16 KB page size alignment
+target_link_options(serenity_llama PRIVATE "-Wl,-z,max-page-size=16384")
+
 # Include directories
 target_include_directories(serenity_llama PRIVATE
     llama.cpp/include

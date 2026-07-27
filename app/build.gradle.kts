@@ -24,6 +24,12 @@ android {
         ndk {
             abiFilters.addAll(listOf("arm64-v8a", "x86_64"))
         }
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+                arguments += listOf("-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+            }
+        }
     }
 
     buildTypes {
@@ -37,7 +43,7 @@ android {
     }
 
     kotlin {
-        jvmToolchain(17)
+        jvmToolchain(21)
         target {
             compilerOptions {
                 optIn.add("kotlin.RequiresOptIn")
@@ -47,8 +53,8 @@ android {
 
     // --- STEP 2: THIS IS THE CRITICAL CONFIGURATION ---
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     androidResources {
@@ -70,12 +76,20 @@ android {
     }
 
     buildToolsVersion = "37.0.0"
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
 } // This closes the android block
 
 dependencies {
     // Core & UI
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.documentfile)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.recyclerview)
@@ -83,12 +97,8 @@ dependencies {
 
     // Hilt Core
     implementation(libs.hilt.android)
-    // Hilt Compiler (changed from kapt to ksp)
+    // Hilt Compiler (must use ksp for code generation)
     ksp(libs.hilt.compiler)
-
-    // Hilt
-    implementation("com.google.dagger:hilt-android:2.51.1")
-    ksp("com.google.dagger:hilt-compiler:2.51.1")
 
     // ADD THIS LINE FOR JSON PARSING
     implementation(libs.gson)
@@ -104,28 +114,30 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
 
     // LiteRT-LM & Qualcomm QNN NPU Delegate for on-device inference
-    implementation("com.google.ai.edge.litertlm:litertlm-android:latest.release")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.14.0")
     implementation(libs.qnn.runtime)
     implementation(libs.qnn.litert.delegate)
 
     // Jetpack Compose Dependencies
-    val composeBom = platform("androidx.compose:compose-bom:2024.05.00")
-    implementation(composeBom)
+    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.ui)
     implementation(libs.ui.graphics)
     implementation(libs.ui.tooling.preview)
     implementation(libs.material3)
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.activity.compose)
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     // Android Studio Preview support
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
 
     // UI Tests (optional but recommended)
-    androidTestImplementation(composeBom)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     implementation(libs.glide)
-    ksp(libs.ksp)
+    // ksp(libs.ksp)
     // Optional: Hilt for testing
     androidTestImplementation(libs.hilt.android.testing)
     kspAndroidTest(libs.hilt.compiler)

@@ -9,21 +9,51 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.serenitydroid.net.GoogleDriveDownloader
-import com.example.serenitydroid.ui.theme.*
+import com.example.serenitydroid.ui.theme.SerenityAITheme
+import com.example.serenitydroid.ui.theme.SerenityAccent
+import com.example.serenitydroid.ui.theme.SerenityBackground
+import com.example.serenitydroid.ui.theme.SerenityInference
+import com.example.serenitydroid.ui.theme.SerenitySurface
+import com.example.serenitydroid.ui.theme.SerenityText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -272,12 +302,24 @@ fun ModelInstallerScreen(
 
             Text("LOCAL STORAGE (PHONE / SD CARD)", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
 
-            Button(
-                onClick = onSelectLocalFile,
-                colors = ButtonDefaults.buttonColors(containerColor = SerenitySurface),
-                modifier = Modifier.fillMaxWidth().height(48.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("SELECT LOCAL FILE FROM STORAGE", color = SerenityAccent, fontFamily = FontFamily.Monospace)
+                Button(
+                    onClick = onSelectLocalFile,
+                    colors = ButtonDefaults.buttonColors(containerColor = SerenitySurface),
+                    modifier = Modifier.weight(1f).height(48.dp)
+                ) {
+                    Text("SELECT LOCAL FILE", color = SerenityAccent, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                }
+                Button(
+                    onClick = onSelectLocalFile,
+                    colors = ButtonDefaults.buttonColors(containerColor = SerenityAccent),
+                    modifier = Modifier.weight(1f).height(48.dp)
+                ) {
+                    Text("gguf to LiteRT-LM", color = SerenityBackground, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, fontSize = 11.sp)
+                }
             }
         }
     }

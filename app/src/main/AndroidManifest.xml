@@ -38,8 +38,28 @@
             android:label="@string/title_activity_settings"
             android:theme="@style/Theme.SerenityAI" />
 
+        <activity
+            android:name="com.example.serenity_md_viewer.MdViewerActivity"
+            android:exported="true"
+            android:label="Serenity Docs"
+            android:theme="@style/Theme.SerenityAI">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:host="*" />
+                <data android:scheme="file" android:host="*" />
+                <data android:mimeType="text/markdown" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
         <uses-native-library android:name="libvndksupport.so" android:required="false"/>
         <uses-native-library android:name="libOpenCL.so" android:required="false"/>
+        <uses-native-library android:name="libQnnHtp.so" android:required="false"/>
+        <uses-native-library android:name="libQnnSystem.so" android:required="false"/>
+        <uses-native-library android:name="libQnnHtpV75Skel.so" android:required="false"/>
+        <uses-native-library android:name="libQnnHtpV79Skel.so" android:required="false"/>
     </application>
 
 </manifest>

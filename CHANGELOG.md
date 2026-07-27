@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Version 1.5.0 Alpha - 2026-07-25
+
+### Added
+
+- Replaced static `LITERT_LM` badge in model selection dropdowns (`SerenityHomeScreen.kt`, `SettingsScreen.kt`) with top compatible hardware inference engine (`NPU`, `GPU`, `CPU`) evaluated dynamically per model and device capabilities.
+- Updated `qualcommNPUsetup.md` grounding model installation, runtime engine dispatches, and NPU delegates directly in official Google AI Edge LiteRT and Qualcomm AI Hub documentation specs.
+- Added `GgufConverterWizard.kt` engine and `RuntimeWizardDialog.kt` step-by-step Jetpack Compose dialog titled **"gguf to LiteRT-LM"** with target quantization presets (`INT8`, `INT4`, `FP16`) and live hardware compatibility checking.
+- Enabled all runtimes by default in `ChatViewModel.kt` (`RuntimeOption.ALL_LEAF_RUNTIMES`).
+- Added **"gguf to LiteRT-LM"** conversion wizard launcher buttons in `SettingsScreen.kt` and `ModelInstallerActivity.kt`.
+- Updated `ModelRefresher.kt` and `ChatViewModel.kt` to dynamically filter discovered models by selected runtime file extensions.
+- Added multi-modal vision support (Ask Image) with image attachment UI and Bitmap passing into LiteRT engine.
+- Implemented generation stats tracking in `ChatViewModel.kt` displaying Time-To-First-Token (TTFT), Decode Speed (t/s), and Latency during streaming.
+- Enabled splittable K and V cache configuration internally in `LiteRtManager.kt` via reflection for Edge models that support it.
+
+## Version 1.4.21 Alpha - 2026-07-25
+
+### Added
+
+- Added `ModelRefresher` component in `com.example.serenitydroid.engine` to recursively scan and refresh available models in a specified folder.
+- Added `REFRESH MODELS` action button in `SettingsScreen.kt` for manual directory rescanning.
+
+### Fixed
+
+- Fixed `Invalid catalog definition` error in `gradle/libs.versions.toml` by pointing `androidx-recyclerview` `version.ref` to `recyclerview` instead of `recyclerviewVersion`.
+- Fixed post-response app crash in `LiteRtManager.kt` by launching response flow collection within callbackFlow scope instead of an unmanaged `CoroutineScope(Dispatchers.IO)`.
+
 ## Version 1.4.20 Alpha - 2026-07-24
 
 ### Added
