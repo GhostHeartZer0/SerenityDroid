@@ -54,6 +54,26 @@ google-services.json
 Models/
 *.gguf
 *.bin
+*.litertlm
+*.tflite
 
-#Reference Files
+# Serenity Artifacts
+.artifacts/
+
+# Sub-projects / Sub-modules (Managed separately)
+/LiteRT-LM/
+/ai-hub-apps/
+/llama.cpp/
+/app/src/main/cpp/llama.cpp/
+/litert_npu_runtime_libraries/
+/litert_npu_runtime_libraries_jit/
+/gallery/
+
+# Temporary / Log files
+logcatdump.md
+
+# Build Artifacts
+**/jniLibs/
+
+# Reference Files
 SerenityPC Refrences/*
