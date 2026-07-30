@@ -19,6 +19,7 @@ This release brings massive performance improvements and a much-requested overha
     - **System Diagnostics**: Added an NPU Readiness tool to help you troubleshoot hardware acceleration issues.
     - **Visual Updates**: New faded persona backgrounds (optional) and a cleaner, more intuitive chat interface.
 - **The Under-the-Hood Stuff**:
+    - Broadened `.gitignore` glob patterns (`**/llama.cpp/`, `**/LiteRT-LM/`, etc.) to prevent accidental tracking of submodules.
     - Aggressive control tag stripping to keep your chat logs clean.
     - Optimized KV Cache management with quantization support (F16 down to Q4_0).
     - Better error handling for model loading and engine fallbacks.
