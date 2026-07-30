@@ -1,10 +1,10 @@
-transformers
-urllib3
+transformers==5.14.1
+urllib3==2.7.0
 torch
 protobuf
 sentencepiece
-idna
-pytest
+idna==3.18
+pytest==9.1.1
 setuptools
 filelock
 Jinja2
