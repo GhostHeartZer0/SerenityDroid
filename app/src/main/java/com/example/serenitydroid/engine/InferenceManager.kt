@@ -312,7 +312,7 @@ class InferenceManager(
                     mmapSetter?.invoke(genieConfig, true)
                     faSetter?.invoke(genieConfig, true)
                     
-                    Log.i(TAG, "Genie X: Applied mmap=${mmapSetter?.name ?: "NOT FOUND"}, flash_attn=${faSetter?.name ?: "NOT FOUND"}")
+                    Log.i(TAG, "Genie X: Applied mmap=${mmapSetter?.name ?: "NOT FOUND"}, flash_attn=${faSetter?.name ?: "NOT FOUND"}") //TODO either remove or revisit this
                 } catch (e: Exception) {
                     Log.w(TAG, "GenieConfig discovery failed: ${e.message}")
                 }
