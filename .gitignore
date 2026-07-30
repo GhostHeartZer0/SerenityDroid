@@ -61,13 +61,12 @@ Models/
 .artifacts/
 
 # Sub-projects / Sub-modules (Managed separately)
-/LiteRT-LM/
-/ai-hub-apps/
-/llama.cpp/
-/app/src/main/cpp/llama.cpp/
-/litert_npu_runtime_libraries/
-/litert_npu_runtime_libraries_jit/
-/gallery/
+**/LiteRT-LM/
+**/ai-hub-apps/
+**/llama.cpp/
+**/litert_npu_runtime_libraries/
+**/litert_npu_runtime_libraries_jit/
+**/gallery/
 
 # Temporary / Log files
 logcatdump.md
