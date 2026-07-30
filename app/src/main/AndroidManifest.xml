@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".SerenityAIApplication"
@@ -38,8 +41,40 @@
             android:label="@string/title_activity_settings"
             android:theme="@style/Theme.SerenityAI" />
 
+        <activity
+            android:name="com.example.serenity_md_viewer.MdViewerActivity"
+            android:exported="true"
+            android:label="Serenity Markdown Viewer"
+            android:theme="@style/Theme.SerenityAI">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="text/markdown" />
+                <data android:mimeType="text/x-markdown" />
+                <data android:mimeType="text/plain" />
+                <data android:pathPattern=".*\\.md" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".engine.InferenceService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="In-app Local Large Language Model (LLM) Inference Engine. Requires high CPU priority to maintain generation speed on mobile hardware." />
+        </service>
+
         <uses-native-library android:name="libvndksupport.so" android:required="false"/>
         <uses-native-library android:name="libOpenCL.so" android:required="false"/>
+        <uses-native-library android:name="libQnnHtp.so" android:required="false"/>
+        <uses-native-library android:name="libQnnSystem.so" android:required="false"/>
+        <uses-native-library android:name="libQnnHtpV75Skel.so" android:required="false"/>
+        <uses-native-library android:name="libQnnHtpV79Skel.so" android:required="false"/>
     </application>
 
 </manifest>

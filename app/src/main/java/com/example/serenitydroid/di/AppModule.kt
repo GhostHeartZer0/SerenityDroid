@@ -1,7 +1,10 @@
 package com.example.serenitydroid.di
 
 import android.content.Context
-import com.example.serenitydroid.engine.LiteRtManager
+import com.example.serenitydroid.engine.InferenceManager
+import com.example.serenitydroid.engine.ModelRefresher
+import com.example.serenitydroid.engine.DeviceDetector
+import com.example.serenitydroid.data.SettingsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,7 +18,25 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideLiteRtManager(@ApplicationContext context: Context): LiteRtManager {
-        return LiteRtManager(context)
+    fun provideInferenceManager(@ApplicationContext context: Context): InferenceManager {
+        return InferenceManager(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideModelRefresher(): ModelRefresher {
+        return ModelRefresher()
+    }
+
+    @Provides
+    @Singleton
+    fun provideDeviceDetector(@ApplicationContext context: Context): DeviceDetector {
+        return DeviceDetector(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository {
+        return SettingsRepository(context)
     }
 }

@@ -13,5 +13,6 @@ data class Persona(
     @param:ColorRes val fgColorRes: Int,
     val gpuLayers: Int,
     val modelAssetFileName: String, // Added field for the model asset file name
-    val visionProjectorFileName: String? = null // New field for mmproj
+    val visionProjectorFileName: String? = null, // New field for mmproj
+    val systemPrompt: String = ""
 )

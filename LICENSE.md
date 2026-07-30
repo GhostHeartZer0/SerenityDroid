@@ -189,3 +189,23 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+---
+
+### Third-Party Attributions
+
+Serenity AI incorporates third-party software components. We gratefully acknowledge the following:
+
+**Google LLC**
+- **LiteRT & LiteRT-LM**: Used under the Apache License 2.0. Copyright (c) Google LLC.
+- **Android Jetpack Libraries**: Used under the Apache License 2.0.
+
+**Qualcomm Technologies, Inc.**
+- **Qualcomm® AI Stack (QNN)**: This software is subject to the terms of the Qualcomm® AI Stack Product Kit License Agreement. Portions Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+- **Genie X SDK**: Used for optimized on-device inference on Snapdragon® platforms.
+
+**Georgi Gerganov & The ggml authors**
+- **llama.cpp / ggml**: Used under the MIT License. Copyright (c) 2023-2026 Georgi Gerganov.
+
+**LLVM Project**
+- **OpenMP (libomp)**: Used under the Apache License v2.0 with LLVM Exceptions. Copyright (c) 1997-2026 Intel Corporation / LLVM Project.

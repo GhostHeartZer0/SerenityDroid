@@ -1,237 +1,237 @@
 package com.example.serenitydroid.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.serenitydroid.ChatViewModel
-import com.example.serenitydroid.ui.theme.SerenityAccent
-import com.example.serenitydroid.ui.theme.SerenityBackground
-import com.example.serenitydroid.ui.theme.SerenityInference
-import com.example.serenitydroid.ui.theme.SerenitySurface
+import com.example.serenitydroid.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     viewModel: ChatViewModel,
     onBack: () -> Unit,
-    onDownloadMore: () -> Unit
+    onOpenParameters: () -> Unit,
+    onOpenDocs: () -> Unit = {},
+    onDownloadMore: () -> Unit = {},
+    onBrowseFileExplorer: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val availableModels by viewModel.availableModels.collectAsState()
-    var selectedModel by remember { mutableStateOf(uiState.customModelPath ?: "") }
+
+    var showNpuDialog by remember { mutableStateOf(false) }
+
+    if (showNpuDialog) {
+        val diag = viewModel.getNpuDiagnosticInfo()
+        AlertDialog(
+            onDismissRequest = { showNpuDialog = false },
+            title = { Text("NPU DIAGNOSTICS & READINESS", color = SerenityAccent, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Overall NPU Capable: ${if (diag.isNpuCapable) "YES" else "NO"}", color = if (diag.isNpuCapable) SerenityAccent else SerenityError, fontWeight = FontWeight.Bold)
+                    Text("• Dynamic Feature Installed: ${diag.genieXModuleInstalled}")
+                    Text("• libgeniex.so Present: ${diag.hasGenieXCore}")
+                    Text("• libgeniex_plugin_llama_cpp.so: ${diag.hasLlamaPlugin}")
+                    Text("• libgeniex_plugin_qairt.so: ${diag.hasQairtPlugin}")
+                    Text("• libQnnHtp.so Present: ${diag.hasQnnHtp}")
+                    Text("• OpenMP (libomp.so) Loaded: ${diag.hasOpenMp}")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text("Native Lib Dir: ${diag.nativeLibDir}", fontSize = 10.sp, color = SerenityTextDim, fontFamily = FontFamily.Monospace)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showNpuDialog = false }) {
+                    Text("CLOSE", color = SerenityAccent)
+                }
+            },
+            containerColor = SerenitySurface
+        )
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("SYSTEM SETTINGS", fontFamily = FontFamily.Monospace, color = SerenityAccent) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = SerenityAccent)
-                    }
-                },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = SerenityAccent) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = SerenityBackground)
             )
         },
         containerColor = SerenityBackground
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("MODEL SELECTION", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
-
-            var expanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = it }
-            ) {
-                OutlinedTextField(
-                    value = if (selectedModel.isBlank()) "Default (Assets)" else selectedModel,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Active Model") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = SerenityAccent,
-                        unfocusedBorderColor = SerenitySurface
-                    )
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    modifier = Modifier.background(SerenitySurface)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Default (Assets)") },
-                        onClick = {
-                            selectedModel = ""
-                            viewModel.setCustomModel("")
-                            expanded = false
-                        }
-                    )
-                    availableModels.forEach { modelName ->
-                        DropdownMenuItem(
-                            text = { Text(modelName) },
-                            onClick = {
-                                selectedModel = modelName
-                                viewModel.setCustomModel(modelName)
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Button(
-                onClick = onDownloadMore,
-                colors = ButtonDefaults.buttonColors(containerColor = SerenitySurface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("DOWNLOAD / INSTALL MORE MODELS", color = SerenityAccent)
-            }
-
-            HorizontalDivider(color = SerenitySurface)
-
-            Text("HARDWARE ACCELERATION (BACKEND)", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                com.example.serenitydroid.engine.DeviceBackendMode.values().forEach { mode ->
+            Text("HARDWARE DEVICE BACKEND", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
+            Text("Select preferred accelerator. The engine (Genie/LiteRT/Llama) will be chosen automatically based on model format.", style = MaterialTheme.typography.bodySmall, color = SerenityTextDim)
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.example.serenitydroid.engine.DeviceBackendMode.entries.forEach { mode ->
                     val isSelected = uiState.backendMode == mode
                     Button(
                         onClick = { viewModel.setBackendMode(mode) },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isSelected) SerenityAccent else SerenitySurface
-                        ),
-                        modifier = Modifier.weight(1f)
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) SerenityAccent else SerenitySurface),
+                        modifier = Modifier.weight(1f).height(40.dp)
                     ) {
-                        Text(
-                            mode.name,
-                            color = if (isSelected) SerenityBackground else SerenityAccent,
-                            fontSize = androidx.compose.ui.unit.TextUnit.Unspecified
-                        )
+                        Text(mode.name, color = if (isSelected) SerenityBackground else SerenityAccent, fontSize = 10.sp)
                     }
                 }
             }
 
-            Row(
+            Spacer(modifier = Modifier.height(4.dp))
+            OutlinedButton(
+                onClick = { showNpuDialog = true },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = SerenityAccent)
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("Autoload Model on Startup", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
-                    Text("Automatically load model into RAM when app opens", style = MaterialTheme.typography.bodySmall, color = SerenityInference)
-                }
-                Switch(
-                    checked = uiState.isAutoLoadOnStartup,
-                    onCheckedChange = { viewModel.setAutoLoadOnStartup(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = SerenityBackground,
-                        checkedTrackColor = SerenityAccent,
-                        uncheckedThumbColor = SerenityAccent,
-                        uncheckedTrackColor = SerenitySurface
-                    )
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("App Profiling (Resource Monitor)", color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Bold)
-                    Text("Display memory & resource usage box above chat window upon interaction", style = MaterialTheme.typography.bodySmall, color = SerenityInference)
-                }
-                Switch(
-                    checked = uiState.isAppProfilingEnabled,
-                    onCheckedChange = { viewModel.setAppProfilingEnabled(it) },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = SerenityBackground,
-                        checkedTrackColor = SerenityAccent,
-                        uncheckedThumbColor = SerenityAccent,
-                        uncheckedTrackColor = SerenitySurface
-                    )
-                )
+                Text("RUN NPU READINESS DIAGNOSTICS", fontWeight = FontWeight.Bold)
             }
 
             HorizontalDivider(color = SerenitySurface)
 
-            Text("ENGINE PARAMETERS & MEMORY", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
-
-            if (uiState.systemRamText.isNotBlank()) {
-                Text(
-                    "System RAM: ${uiState.systemRamText}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SerenityInference
-                )
+            Text("KV CACHE SIZE (CONTEXT MEMORY)", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
+            Text("Lower values (2048-4096) reduce RAM usage & prevent speed bottlenecks on mobile CPU.", style = MaterialTheme.typography.bodySmall, color = SerenityTextDim)
+            
+            val kvOptions = listOf(2048, 4096, 8192, 16384, 32768, 65536)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                kvOptions.forEach { size ->
+                    val isSelected = uiState.kvCacheSize == size
+                    Button(
+                        onClick = { viewModel.setKvCacheSize(size) },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) SerenityAccent else SerenitySurface),
+                        modifier = Modifier.weight(1f).height(38.dp),
+                        contentPadding = PaddingValues(horizontal = 2.dp)
+                    ) {
+                        Text(if (size >= 1024) "${size / 1024}K" else "$size", color = if (isSelected) SerenityBackground else SerenityAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    if (uiState.isAutoGpuLayers) "GPU Offload (Layers): AUTO (${uiState.gpuLayers})" else "GPU Offload (Layers): ${uiState.gpuLayers}",
-                    color = androidx.compose.ui.graphics.Color.White
-                )
-                Button(
-                    onClick = { viewModel.setAutoGpuLayers(!uiState.isAutoGpuLayers) },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (uiState.isAutoGpuLayers) SerenityAccent else SerenitySurface
-                    ),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                    modifier = Modifier.height(28.dp)
-                ) {
-                    Text(
-                        "AUTO RAM",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (uiState.isAutoGpuLayers) SerenityBackground else SerenityAccent
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("KV CACHE QUANTIZATION", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
+            KvQuantSelector("K Cache", uiState.kvQuantK) { viewModel.setParameter(kvK = it) }
+            KvQuantSelector("V Cache", uiState.kvQuantV) { viewModel.setParameter(kvV = it) }
+
+            HorizontalDivider(color = SerenitySurface)
+
+            Text("PERFORMANCE BENCHMARK", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
+            Card(colors = CardDefaults.cardColors(containerColor = SerenitySurface)) {
+                Row(modifier = Modifier.padding(16.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column {
+                        Text("Active Engine Speed", style = MaterialTheme.typography.labelSmall, color = SerenityInference)
+                        Text(uiState.benchmarkResult ?: "No result", color = Color.White, style = MaterialTheme.typography.titleLarge)
+                    }
+                    Button(
+                        onClick = { viewModel.runBenchmark() },
+                        enabled = uiState.isModelLoaded && !uiState.isBenchmarking,
+                        colors = ButtonDefaults.buttonColors(containerColor = SerenityInference)
+                    ) {
+                        Text(if (uiState.isBenchmarking) "RUNNING..." else "START BENCH", color = SerenityBackground)
+                    }
+                }
+            }
+
+            HorizontalDivider(color = SerenitySurface)
+
+            Text("UI CUSTOMIZATION", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
+            Card(colors = CardDefaults.cardColors(containerColor = SerenitySurface)) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Sticky Bottom Scroll", color = Color.White, fontWeight = FontWeight.Medium)
+                            Text("Automatically scroll to bottom when new messages arrive", style = MaterialTheme.typography.bodySmall, color = SerenityTextDim)
+                        }
+                        Switch(
+                            checked = uiState.isStickyBottomScroll,
+                            onCheckedChange = { viewModel.setStickyBottomScroll(it) },
+                            colors = SwitchDefaults.colors(checkedTrackColor = SerenityAccent)
+                        )
+                    }
+                    HorizontalDivider(color = SerenityBackground)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Faded Persona Background", color = Color.White, fontWeight = FontWeight.Medium)
+                            Text("Display active level background image behind chat area", style = MaterialTheme.typography.bodySmall, color = SerenityTextDim)
+                        }
+                        Switch(
+                            checked = uiState.enablePersonaBackground,
+                            onCheckedChange = { viewModel.setEnablePersonaBackground(it) },
+                            colors = SwitchDefaults.colors(checkedTrackColor = SerenityAccent)
+                        )
+                    }
+                    HorizontalDivider(color = SerenityBackground)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Chat Text Size", color = Color.White)
+                        Text("${uiState.chatTextSize.toInt()}sp", color = SerenityAccent)
+                    }
+                    Slider(
+                        value = uiState.chatTextSize,
+                        onValueChange = { viewModel.setUiSettings(textSize = it) },
+                        valueRange = 10f..24f,
+                        steps = 14,
+                        colors = SliderDefaults.colors(thumbColor = SerenityAccent, activeTrackColor = SerenityAccent)
                     )
                 }
             }
 
-            var layers by remember(uiState.gpuLayers) { mutableStateOf(uiState.gpuLayers.toFloat()) }
-            Slider(
-                value = layers,
-                onValueChange = { layers = it },
-                onValueChangeFinished = { viewModel.setGpuLayers(layers.toInt()) },
-                valueRange = 0f..64f,
-                steps = 63,
-                colors = SliderDefaults.colors(thumbColor = SerenityAccent, activeTrackColor = SerenityAccent)
-            )
+            HorizontalDivider(color = SerenitySurface)
 
-            var ctx by remember(uiState.contextSize) { mutableStateOf(uiState.contextSize.toFloat()) }
-            Text("Context Window: ${ctx.toInt()}", color = androidx.compose.ui.graphics.Color.White)
-            Slider(
-                value = ctx,
-                onValueChange = { ctx = (it / 2048f).toInt() * 2048f },
-                onValueChangeFinished = { viewModel.setContextSize(ctx.toInt()) },
-                valueRange = 2048f..32768f,
-                steps = 14,
-                colors = SliderDefaults.colors(thumbColor = SerenityAccent, activeTrackColor = SerenityAccent)
-            )
-            
-            Spacer(modifier = Modifier.height(32.dp))
+            Text("DOCUMENTATION & MARKDOWN VIEWER", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
+            Card(colors = CardDefaults.cardColors(containerColor = SerenitySurface)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("View system documentation, release notes, and markdown files.", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = onOpenDocs,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = SerenityInference)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Open Book", tint = SerenityBackground, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("OPEN MARKDOWN VIEWER", color = SerenityBackground, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            HorizontalDivider(color = SerenitySurface)
+
+            Text("MODEL ACQUISITION", style = MaterialTheme.typography.titleMedium, color = SerenityAccent, fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { viewModel.updateAvailableModels() }, colors = ButtonDefaults.buttonColors(containerColor = SerenitySurface), modifier = Modifier.weight(1f)) {
+                    Text("REFRESH CATALOG", color = SerenityAccent)
+                }
+                Button(onClick = onDownloadMore, colors = ButtonDefaults.buttonColors(containerColor = SerenityAccent), modifier = Modifier.weight(1f)) {
+                    Text("DOWNLOADS", color = SerenityBackground)
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = onBrowseFileExplorer, colors = ButtonDefaults.buttonColors(containerColor = SerenitySurface), modifier = Modifier.weight(1f)) {
+                    Text("FILE EXPLORER", color = SerenityAccent)
+                }
+            }
+
+            HorizontalDivider(color = SerenitySurface)
+
+            Button(
+                onClick = { viewModel.clearModels() },
+                colors = ButtonDefaults.buttonColors(containerColor = SerenityError),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("PURGE LOCAL CATALOG", color = Color.White, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

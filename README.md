@@ -2,6 +2,8 @@
 
 **A chatbot, a companion.**
 
+(TODO: update this)
+
 Based off the Serenity PC desktop application, retooled from the original Python/Tkinter version. Built with Kotlin following modern Android architecture patterns (MVVM).
 
 This version implements key user feedback from the original, adding significant features like an ephemeral chat setting, improved UI state feedback, and a more intuitive startup flow.

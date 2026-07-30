@@ -1,14 +1,15 @@
 [versions]
 activityKtxVersion = "1.11.0"
-agp = "8.12.3"
+agp = "9.3.1"
 appcompatVersion = "1.7.1"
 constraintlayoutVersion = "2.2.1"
 glide = "5.0.5"
 gson = "2.13.2"
-kotlin = "2.2.21"
-kotlinxCoroutinesAndroid = "1.8.1"
-ksp= "2.2.21-2.0.4"
-hilt= "2.57.2"
+kotlin = "2.0.21"
+kotlinxCoroutinesAndroid = "1.11.0"
+ksp = "2.0.21-1.0.28"
+hilt = "2.55"
+kotlinxMetadataJvm = "0.9.0"
 coreKtx = "1.17.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -21,7 +22,7 @@ materialVersion = "1.13.0"
 preferenceKtx = "1.2.1"
 recyclerview = "1.4.0"
 activityKtx = "1.11.0"
-recyclerviewVersion = "1.4.0"
+qnn = "2.48.0"
 
 
 
@@ -33,7 +34,7 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-lifecycle-livedata-ktx = { module = "androidx.lifecycle:lifecycle-livedata-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-preference-ktx = { module = "androidx.preference:preference-ktx", version.ref = "preferenceKtx" }
-androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerviewVersion" }
+androidx-recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
 glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -49,6 +50,11 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
+androidx-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version = "1.1.0" }
+play-feature-delivery-ktx = { group = "com.google.android.play", name = "feature-delivery-ktx", version = "2.1.0" }
+geniex-android = { group = "com.qualcomm.qti", name = "geniex-android", version = "0.3.16" }
 # Hilt Core
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 # Hilt Compiler (must use ksp for code generation)
@@ -57,6 +63,9 @@ hilt-compiler = { group = "com.google.dagger", name = "hilt-compiler", version.r
 hilt-android-testing = { group = "com.google.dagger", name = "hilt-android-testing", version.ref = "hilt" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesAndroid" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
+kotlinx-metadata-jvm = { group = "org.jetbrains.kotlinx", name = "kotlinx-metadata-jvm", version.ref = "kotlinxMetadataJvm" }
+qnn-runtime = { module = "com.qualcomm.qti:qnn-runtime", version.ref = "qnn" }
+qnn-litert-delegate = { module = "com.qualcomm.qti:qnn-litert-delegate", version.ref = "qnn" }
 ksp = { module = "com.github.bumptech.glide:ksp", version.ref = "glide" }
 material = { module = "com.google.android.material:material", version.ref = "materialVersion" }
 material3 = { module = "androidx.compose.material3:material3" }
