@@ -4,6 +4,7 @@ import android.content.Context
 import com.example.serenitydroid.engine.InferenceManager
 import com.example.serenitydroid.engine.ModelRefresher
 import com.example.serenitydroid.engine.DeviceDetector
+import com.example.serenitydroid.data.SettingsRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -31,5 +32,11 @@ object AppModule {
     @Singleton
     fun provideDeviceDetector(@ApplicationContext context: Context): DeviceDetector {
         return DeviceDetector(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideSettingsRepository(@ApplicationContext context: Context): SettingsRepository {
+        return SettingsRepository(context)
     }
 }

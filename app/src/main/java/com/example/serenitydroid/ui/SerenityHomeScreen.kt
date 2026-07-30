@@ -1,35 +1,30 @@
 package com.example.serenitydroid.ui
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.serenitydroid.engine.InferenceManager
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +52,7 @@ fun SerenityHomeScreen(
     val listState = rememberLazyListState()
 
     LaunchedEffect(messages.size) {
-        if (uiState.isScrollLocked && messages.isNotEmpty()) {
+        if (uiState.isStickyBottomScroll && messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
         }
     }
@@ -74,8 +69,8 @@ fun SerenityHomeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onOpenDocs) {
-                        Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = "Documentation", tint = SerenityInference)
+                    IconButton(onClick = { viewModel.clearCurrentSession() }) {
+                        Icon(Icons.Default.DeleteSweep, contentDescription = "Clear Session", tint = SerenityError)
                     }
                     IconButton(onClick = onOpenParameters) {
                         Icon(Icons.Default.Build, contentDescription = "Parameters", tint = SerenityInference)
@@ -84,7 +79,7 @@ fun SerenityHomeScreen(
                         Icon(Icons.Default.Settings, contentDescription = "Settings", tint = SerenityAccent)
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = SerenityBackground)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = SerenityBackground)
             )
         },
         containerColor = SerenityBackground
@@ -132,6 +127,17 @@ fun SerenityHomeScreen(
             }
 
             Box(modifier = Modifier.weight(1f)) {
+                if (uiState.enablePersonaBackground && activePersona.imageResId != 0) {
+                    Image(
+                        painter = painterResource(id = activePersona.imageResId),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = 0.12f },
+                        contentScale = ContentScale.Fit
+                    )
+                }
+
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -142,6 +148,18 @@ fun SerenityHomeScreen(
                     }
                 }
                 
+                // Slim Session History Overlay originating from bottom-right button
+                this@Column.AnimatedVisibility(
+                    visible = uiState.showHistoryOverlay,
+                    enter = fadeIn(animationSpec = tween(220)) + scaleIn(initialScale = 0.2f, transformOrigin = TransformOrigin(0.95f, 0.95f)) + expandIn(expandFrom = Alignment.BottomEnd),
+                    exit = fadeOut(animationSpec = tween(180)) + scaleOut(targetScale = 0.2f, transformOrigin = TransformOrigin(0.95f, 0.95f)) + shrinkOut(shrinkTowards = Alignment.BottomEnd),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 60.dp, end = 16.dp)
+                ) {
+                    SessionHistoryOverlay(viewModel, uiState)
+                }
+
                 // Floating tools column
                 Column(
                     modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
@@ -171,11 +189,17 @@ fun SerenityHomeScreen(
                         }
                     }
 
+                    // Floating History Overlay Toggle Button
                     IconButton(
-                        onClick = { viewModel.toggleScrollLock() },
-                        modifier = Modifier.background(if (uiState.isScrollLocked) SerenityAccent else SerenitySurface, CircleShape).size(36.dp)
+                        onClick = { viewModel.toggleHistoryOverlay() },
+                        modifier = Modifier.background(if (uiState.showHistoryOverlay) SerenityAccent else SerenitySurface, CircleShape).size(36.dp)
                     ) {
-                        Icon(Icons.Default.Lock, contentDescription = "Scroll Lock", tint = if (uiState.isScrollLocked) SerenityBackground else SerenityTextDim, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Default.History,
+                            contentDescription = "Session History Overlay",
+                            tint = if (uiState.showHistoryOverlay) SerenityBackground else SerenityTextDim,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
@@ -194,6 +218,7 @@ fun SerenityHomeScreen(
             
             SystemControlsRow(
                 selectedLevel = activePersona.level,
+                availableLevels = viewModel.getAvailableLevels(),
                 onApplyLevel = { viewModel.setSelectedLevel(it) }
             )
         }
@@ -257,64 +282,94 @@ fun ChatMessageItem(message: ChatMessage, textSize: Float) {
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = alignment) {
         if (message.senderType != SenderType.SYSTEM) {
-            Surface(color = bgColor, shape = MaterialTheme.shapes.medium, modifier = Modifier.widthIn(max = 300.dp)) {
+            Surface(color = bgColor, shape = MaterialTheme.shapes.medium, modifier = Modifier.widthIn(max = 350.dp)) {
                 Column(modifier = Modifier.padding(10.dp)) {
-                    val processedText = message.text
-                    val hasThinkStart = processedText.contains("<think>")
-                    val hasThinkEnd = processedText.contains("</think>")
+                    val fullText = InferenceManager.stripControlTags(message.text)
                     
-                    if (hasThinkStart) {
-                        val thought = if (hasThinkEnd) {
-                            processedText.substringAfter("<think>").substringBefore("</think>")
+                    // Professional Thought Parser using explicit tag indices
+                    val startTag = "<think>"
+                    val endTag = "</think>"
+                    
+                    val startIndex = fullText.indexOf(startTag, ignoreCase = true)
+                    val endIndex = fullText.indexOf(endTag, ignoreCase = true)
+                    
+                    if (startIndex != -1) {
+                        val thought: String
+                        val answer: String
+                        val isThinking: Boolean
+                        
+                        if (endIndex != -1 && endIndex > startIndex) {
+                            // Fully closed block
+                            thought = fullText.substring(startIndex + startTag.length, endIndex).trim()
+                            // Combine everything before <think> and after </think>
+                            val before = fullText.substring(0, startIndex).trim()
+                            val after = fullText.substring(endIndex + endTag.length).trim()
+                            answer = if (before.isNotEmpty() && after.isNotEmpty()) "$before\n\n$after" else "$before$after"
+                            isThinking = false
                         } else {
-                            processedText.substringAfter("<think>")
+                            // Currently streaming thought
+                            thought = fullText.substring(startIndex + startTag.length).trim()
+                            answer = fullText.substring(0, startIndex).trim()
+                            isThinking = true
                         }
                         
-                        val answer = if (hasThinkEnd) {
-                            processedText.substringAfter("</think>").trim()
-                        } else ""
-                        
-                        var expanded by remember { mutableStateOf(true) }
-                        
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.3f)),
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
-                                ) {
-                                    Icon(
-                                        if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                        contentDescription = null,
-                                        tint = SerenityTextDim,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Thought Process", style = MaterialTheme.typography.labelSmall, color = SerenityTextDim)
-                                }
-                                AnimatedVisibility(visible = expanded) {
-                                    Text(
-                                        text = thought.trim(),
-                                        color = SerenityTextDim,
-                                        style = MaterialTheme.typography.bodySmall.copy(fontSize = (textSize * 0.85f).sp, fontStyle = FontStyle.Italic),
-                                        modifier = Modifier.padding(top = 4.dp)
-                                    )
+                        // Show card if there's real content or we are still thinking
+                        if (thought.isNotBlank() || isThinking) {
+                            var expanded by remember { mutableStateOf(true) }
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.35f)),
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }
+                                    ) {
+                                        Icon(
+                                            if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                            null, tint = SerenityTextDim, modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            if (isThinking) "Thinking..." else "Thought Process",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = SerenityTextDim
+                                        )
+                                    }
+                                    AnimatedVisibility(visible = expanded) {
+                                        Text(
+                                            text = if (thought.isEmpty() && isThinking) "..." else thought,
+                                            color = SerenityTextDim,
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                fontSize = (textSize * 0.85f).sp,
+                                                fontStyle = FontStyle.Italic,
+                                                lineHeight = (textSize * 1.1f).sp
+                                            ),
+                                            modifier = Modifier.padding(top = 4.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
+                        
                         if (answer.isNotEmpty()) {
                             Text(text = answer, color = textColor, style = MaterialTheme.typography.bodyMedium.copy(fontSize = textSize.sp))
                         }
                     } else {
-                        Text(text = processedText, color = textColor, style = MaterialTheme.typography.bodyMedium.copy(fontSize = textSize.sp))
+                        // No thought tags
+                        Text(text = fullText, color = textColor, style = MaterialTheme.typography.bodyMedium.copy(fontSize = textSize.sp))
                     }
                 }
             }
         } else {
-            Text(message.text, modifier = Modifier.padding(vertical = 2.dp), color = textColor, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace), fontSize = 10.sp)
+            Text(
+                message.text,
+                modifier = Modifier.padding(vertical = 2.dp),
+                color = textColor,
+                style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                fontSize = 10.sp
+            )
         }
     }
 }
@@ -325,23 +380,77 @@ fun ActiveModelSelector(viewModel: ChatViewModel, uiState: com.example.serenityd
     val availableModels by viewModel.availableModels.collectAsState()
     var expanded by remember { mutableStateOf(false) }
     val selectedModel = uiState.customModelPath ?: ""
+    val selectedModelName = if (selectedModel.isBlank()) "Default (Assets)" else selectedModel
+    val isDifferentFromLoaded = uiState.isModelLoaded && uiState.loadedModelName != null && selectedModelName != uiState.loadedModelName
 
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-            OutlinedTextField(
-                value = if (selectedModel.isBlank()) "SELECT MODEL" else selectedModel,
-                onValueChange = {}, readOnly = true, label = { Text("ACTIVE CORE") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SerenityAccent, unfocusedBorderColor = SerenitySurface, disabledTextColor = Color.White),
-                enabled = !uiState.isModelLoading && !uiState.isGenerating
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(SerenitySurface)) {
-                DropdownMenuItem(text = { Text("Default (Assets)", color = Color.White) }, onClick = { viewModel.setCustomModel(""); expanded = false })
-                availableModels.forEach { modelFile ->
-                    DropdownMenuItem(
-                        text = { Row { Text(modelFile.name, modifier = Modifier.weight(1f), color = Color.White); Text(modelFile.getTopCompatibleEngine(LocalContext.current), style = MaterialTheme.typography.labelSmall, color = SerenityInference) } },
-                        onClick = { viewModel.setCustomModel(modelFile.file.name); expanded = false }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = it },
+                modifier = Modifier.weight(1f)
+            ) {
+                OutlinedTextField(
+                    value = selectedModelName,
+                    onValueChange = {}, readOnly = true, label = { Text("ACTIVE CORE") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true).fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SerenityAccent, unfocusedBorderColor = SerenitySurface, disabledTextColor = Color.White),
+                    enabled = !uiState.isModelLoading && !uiState.isGenerating
+                )
+                ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(SerenitySurface)) {
+                    DropdownMenuItem(text = { Text("Default (Assets)", color = Color.White) }, onClick = { viewModel.setCustomModel(""); expanded = false })
+                    availableModels.forEach { modelFile ->
+                        DropdownMenuItem(
+                            text = { Row { Text(modelFile.name, modifier = Modifier.weight(1f), color = Color.White); Text(modelFile.getTopCompatibleEngine(LocalContext.current), style = MaterialTheme.typography.labelSmall, color = SerenityInference) } },
+                            onClick = { viewModel.setCustomModel(modelFile.file.name); expanded = false }
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(
+                onClick = { viewModel.updateAvailableModels() },
+                modifier = Modifier.background(SerenitySurface, CircleShape).size(40.dp)
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = "Refresh Catalog", tint = SerenityAccent, modifier = Modifier.size(20.dp))
+            }
+        }
+
+        if (isDifferentFromLoaded) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 8.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = SerenityInference,
+                shadowElevation = 6.dp
+            ) {
+                Button(
+                    onClick = { viewModel.loadModel() },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SerenityInference),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.SyncAlt,
+                        contentDescription = "Swap Core",
+                        tint = SerenityBackground,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Swap?",
+                        color = SerenityBackground,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -367,13 +476,134 @@ fun ChatInputArea(value: String, onValueChange: (String) -> Unit, onSend: () -> 
 }
 
 @Composable
-fun SystemControlsRow(selectedLevel: Int, onApplyLevel: (Int) -> Unit) {
-    Slider(
-        value = selectedLevel.toFloat(),
-        onValueChange = { onApplyLevel(it.toInt()) },
-        valueRange = 1f..5f,
-        steps = 3,
-        modifier = Modifier.padding(horizontal = 32.dp, vertical = 8.dp),
-        colors = SliderDefaults.colors(thumbColor = SerenityAccent, activeTrackColor = SerenityAccent)
-    )
+fun SessionHistoryOverlay(viewModel: ChatViewModel, uiState: com.example.serenitydroid.UiState) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SerenitySurface.copy(alpha = 0.98f)),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "SESSION HISTORY",
+                    style = MaterialTheme.typography.titleMedium.copy(fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, color = SerenityAccent)
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(onClick = { viewModel.createNewSession() }) {
+                        Icon(Icons.Default.Add, contentDescription = "New Session", tint = SerenityAccent)
+                    }
+                    IconButton(onClick = { viewModel.toggleHistoryOverlay() }) {
+                        Icon(Icons.Default.Close, contentDescription = "Close Overlay", tint = SerenityTextDim)
+                    }
+                }
+            }
+
+            HorizontalDivider(color = SerenityBackground, modifier = Modifier.padding(vertical = 4.dp))
+
+            if (uiState.sessions.isEmpty()) {
+                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text("No saved sessions", color = SerenityTextDim, style = MaterialTheme.typography.bodyMedium)
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(uiState.sessions) { session ->
+                        val isSelected = session.id == uiState.currentSessionId
+                        val formattedDate = remember(session.timestamp) {
+                            java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.US).format(java.util.Date(session.timestamp))
+                        }
+                        
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = if (isSelected) SerenityAccent.copy(alpha = 0.15f) else SerenityBackground),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.loadSession(session.id) },
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(10.dp).fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        session.title,
+                                        color = if (isSelected) SerenityAccent else Color.White,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        "$formattedDate • ${session.messages.size} msgs",
+                                        color = SerenityTextDim,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { viewModel.deleteSession(session.id) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Session", tint = SerenityError, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider(color = SerenityBackground, modifier = Modifier.padding(vertical = 4.dp))
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                TextButton(onClick = { viewModel.clearCurrentSession() }) {
+                    Text("CLEAR CURRENT", color = SerenityError, fontSize = 11.sp)
+                }
+                TextButton(onClick = { viewModel.clearAllSessions() }) {
+                    Text("CLEAR ALL HISTORY", color = SerenityError, fontSize = 11.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SystemControlsRow(
+    selectedLevel: Int,
+    availableLevels: List<Int>,
+    onApplyLevel: (Int) -> Unit
+) {
+    if (availableLevels.isEmpty()) return
+    val currentIndex = availableLevels.indexOf(selectedLevel).coerceAtLeast(0)
+    val maxIndex = (availableLevels.size - 1).coerceAtLeast(1)
+    val steps = if (availableLevels.size > 2) availableLevels.size - 2 else 0
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 2.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("PERFORMANCE LEVEL: LVL $selectedLevel", style = MaterialTheme.typography.labelSmall, color = SerenityAccent, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+        }
+        Slider(
+            value = currentIndex.toFloat(),
+            onValueChange = { idx ->
+                val targetIndex = idx.toInt().coerceIn(0, availableLevels.size - 1)
+                onApplyLevel(availableLevels[targetIndex])
+            },
+            valueRange = 0f..maxIndex.toFloat(),
+            steps = steps,
+            modifier = Modifier.fillMaxWidth(),
+            colors = SliderDefaults.colors(thumbColor = SerenityAccent, activeTrackColor = SerenityAccent)
+        )
+    }
 }

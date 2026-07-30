@@ -11,11 +11,16 @@ data class ModelFile(
 ) {
     fun getTopCompatibleEngine(context: android.content.Context): String {
         val info = DeviceDetector(context).getDeviceHardwareInfo()
+        val nameLower = name.lowercase()
+        val isExplicitNpuModel = nameLower.contains("npu") || nameLower.contains("sm8") || nameLower.contains("sm7") || nameLower.contains("qnn")
+        
         return when {
-            type == EngineType.LITERT_LM && info.isNpuSupported -> "NPU"
+            type == EngineType.LITERT_LM && info.isNpuSupported && isExplicitNpuModel -> "NPU"
             type == EngineType.LITERT_LM -> "GPU"
+            type == EngineType.LLAMA_CPP && info.isNpuSupported -> "NPU"
             type == EngineType.LLAMA_CPP -> if (info.totalRamGb < 4f) "CPU" else "GPU"
-            info.isNpuSupported -> "NPU"
+            type == EngineType.GENIE_X && info.isNpuSupported -> "NPU"
+            info.isNpuSupported && isExplicitNpuModel -> "NPU"
             info.totalRamGb >= 4f -> "GPU"
             else -> "CPU"
         }
@@ -80,7 +85,8 @@ class ModelRefresher {
                 ModelFile(file.name, file, type)
             }
             .toList()
-        Log.d(TAG, "Found ${files.size} matching files")
+        Log.i(TAG, "Catalog Scan Complete: Found ${files.size} models in ${folder.absolutePath}")
+        files.forEach { Log.v(TAG, "  -> ${it.name} (${it.type})") }
         return files
     }
 

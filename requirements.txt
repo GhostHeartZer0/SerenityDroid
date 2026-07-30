@@ -1,0 +1,15 @@
+transformers
+urllib3
+torch
+protobuf
+sentencepiece
+idna
+pytest
+setuptools
+filelock
+Jinja2
+requests
+tqdm
+Pygments
+certifi
+ai-edge-torch

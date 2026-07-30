@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Serenity AI"
 include(":app")
+include(":serenity_npu")

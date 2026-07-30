@@ -1,5 +1,6 @@
 package com.example.serenitydroid.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -24,7 +25,7 @@ import com.example.serenitydroid.ui.theme.*
 @Composable
 fun ModelParametersScreen(
     viewModel: ChatViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -34,7 +35,10 @@ fun ModelParametersScreen(
             TopAppBar(
                 title = { Text("CORE PARAMETERS", fontFamily = FontFamily.Monospace, color = SerenityAccent) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = {
+                        viewModel.reloadIfLoaded()
+                        onBack()
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = SerenityAccent)
                     }
                 },
@@ -172,10 +176,13 @@ fun HardwareTab(viewModel: ChatViewModel, state: com.example.serenitydroid.UiSta
     ParameterSlider(
         label = "KV Cache Size",
         value = state.kvCacheSize.toFloat(),
-        range = 512f..16384f,
-        steps = 31,
-        onValueChange = { viewModel.setParameter(kvSize = it.toInt()) },
-        description = "Total context memory allocation (tokens)"
+        range = 2048f..65536f,
+        steps = 30,
+        onValueChange = { raw ->
+            val snapped = (kotlin.math.round(raw / 2048f) * 2048f).toInt()
+            viewModel.setParameter(kvSize = snapped)
+        },
+        description = "Total context memory allocation in steps of 2048 (tokens)"
     )
 
     ParameterSlider(
@@ -196,7 +203,7 @@ fun HardwareTab(viewModel: ChatViewModel, state: com.example.serenitydroid.UiSta
         description = "Parallel token processing density"
     )
 
-    HorizontalDivider(color = SerenitySurface)
+    HorizontalDivider(color = SerenitySurface, modifier = Modifier.padding(vertical = 8.dp))
 
     Text("COMPATIBILITY VERIFICATION", color = SerenityAccent, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
     
@@ -206,6 +213,76 @@ fun HardwareTab(viewModel: ChatViewModel, state: com.example.serenitydroid.UiSta
             CompatibilityItem("NPU Support", hwInfo.isNpuSupported)
             CompatibilityItem("High RAM Available", hwInfo.availableRamGb > 4f)
             CompatibilityItem("GPU Acceleration", state.useGpu)
+        }
+    }
+
+    HorizontalDivider(color = SerenitySurface, modifier = Modifier.padding(vertical = 12.dp))
+
+    Text("EXPERIMENTAL PERFORMANCE LEVELS", color = SerenityAccent, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+    
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Enable Level 6 (Cecilia)", color = Color.White)
+            Text("Unlocks Cecilia persona on performance slider", style = MaterialTheme.typography.bodySmall, color = SerenityInference)
+        }
+        Switch(
+            checked = state.enableLvl6,
+            onCheckedChange = { viewModel.setEnableLvl6(it) },
+            colors = SwitchDefaults.colors(checkedTrackColor = SerenityAccent)
+        )
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Enable Level 7 (Transcendent)", color = Color.White)
+            Text("Unlocks Transcendent persona on performance slider", style = MaterialTheme.typography.bodySmall, color = SerenityInference)
+        }
+        Switch(
+            checked = state.enableLvl7,
+            onCheckedChange = { viewModel.setEnableLvl7(it) },
+            colors = SwitchDefaults.colors(checkedTrackColor = SerenityAccent)
+        )
+    }
+}
+
+@Composable
+fun KvQuantSelector(
+    label: String,
+    selected: com.example.serenitydroid.engine.KvQuant,
+    onSelect: (com.example.serenitydroid.engine.KvQuant) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, color = Color.White, fontWeight = FontWeight.Medium)
+        
+        Box {
+            TextButton(
+                onClick = { expanded = true },
+                colors = ButtonDefaults.textButtonColors(contentColor = SerenityAccent)
+            ) {
+                Text(selected.name, fontFamily = FontFamily.Monospace)
+            }
+            
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                modifier = Modifier.background(SerenitySurface)
+            ) {
+                com.example.serenitydroid.engine.KvQuant.entries.forEach { quant ->
+                    DropdownMenuItem(
+                        text = { Text(quant.name, color = Color.White) },
+                        onClick = {
+                            onSelect(quant)
+                            expanded = false
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -222,7 +299,8 @@ fun ParameterSlider(
     Column {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, color = Color.White, fontWeight = FontWeight.Medium)
-            Text(java.util.Locale.US.let { String.format(it, "%.2f", value) }, color = SerenityAccent, fontFamily = FontFamily.Monospace)
+            val formattedValue = if (value % 1.0f == 0.0f) value.toInt().toString() else String.format(java.util.Locale.US, "%.2f", value)
+            Text(formattedValue, color = SerenityAccent, fontFamily = FontFamily.Monospace)
         }
         Slider(
             value = value,

@@ -38,10 +38,15 @@ class SettingsActivity : ComponentActivity() {
             SerenityAITheme {
                 SettingsScreen(
                     viewModel = viewModel,
-                    onBack = { finish() },
-                    onOpenParameters = {
-                        // handled by parent
+                    onBack = {
+                        viewModel.reloadIfLoaded()
                         finish()
+                    },
+                    onOpenParameters = {
+                        finish()
+                    },
+                    onOpenDocs = {
+                        startActivity(android.content.Intent(this, com.example.serenity_md_viewer.MdViewerActivity::class.java))
                     },
                     onDownloadMore = {
                         modelInstallerLauncher.launch(android.content.Intent(this, ModelInstallerActivity::class.java))
