@@ -29,7 +29,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 import com.geniex.sdk.bean.LlmStreamResult as GenieStreamResult
 import com.geniex.sdk.bean.ModelConfig as GenieModelConfig
 
@@ -70,6 +69,7 @@ data class ModelConfig(
     val minP: Float = 0.05f,
     val frequencyPenalty: Float = 0.0f,
     val presencePenalty: Float = 0.0f,
+    val maxTokens: Int = 1024,
     val enableMtp: Boolean = false,
     val enableSplitKv: Boolean = true,
     val enableAttentionCaching: Boolean = true,
@@ -106,46 +106,64 @@ class InferenceManager(
         const val LOGCAT_RECOMMENDED_FILTER = "adb logcat -s InferenceManager:V GenieXSdk:V LlamaNative:V *:S"
 
         private val CONTROL_TAG_REGEX = Regex(
-            "</?(?:[a-zA-Z0-9_|-]*_turn|bos|eos|im_start|im_end|pause)>(?:\\s*|:)?(?:user|model|system)?|<\\|im_start\\|>(?:\\s*|:)?(?:user|model|system)?|<\\|im_end\\|>",
+            "(?i)</?(?:start_of_turn|end_of_turn|user_turn|model_turn|system_turn|bos|eos|eot_id|eom_id|start_header_id|end_header_id|im_start|im_end|pause|tool|tool_response|turn)(?:\\s*|:)?(?:user|model|system|assistant|tool)?/?>?|</s>|<s>",
             RegexOption.IGNORE_CASE
         )
 
+        private val STOP_TAG_REGEX = Regex(
+            "(?i)<end_of_turn>|<start_of_turn>|start_of_turn|<turn\\||</s>|<\\|eot_id\\|>|<\\|eom_id\\|>|<\\|im_end\\|>|<\\|start_header_id\\|>|<model>|<user>|<assistant>|user_turn|model_turn",
+            RegexOption.IGNORE_CASE
+        )
+
+        private val TRAILING_PARTIAL_TAG_REGEX = Regex("<[/a-zA-Z0-9_\\-|]*$")
+
         fun stripControlTags(text: String): String {
-            return CONTROL_TAG_REGEX.replace(text, "")
+            val stripped = CONTROL_TAG_REGEX.replace(text, "")
+            return stripped
+                .replace(Regex("(?i)^(?:user|model|system|assistant)\\s*\n"), "")
+                .replace(Regex("(?i)\n(?:user|model|system|assistant)\\s*$"), "")
         }
 
-        init {
-            Log.w(TAG, "==== SERENITY INFERENCE MANAGER [LATEST] STARTING ====")
-            Log.i(TAG, "Logcat filter command: $LOGCAT_RECOMMENDED_FILTER")
-            
-            // Pre-load critical runtimes. Note: Order matters for symbol resolution on Android versions.
-            listOf(
-                "omp",
-                "c++_shared", 
-                "ggml-base", 
-                "ggml", 
-                "llama", 
-                "serenity_llama",
-                "QnnHtp", 
-                "QnnSystem",
-                "LiteRt", 
-                "litert_jni", 
-                "litert_dispatch", 
-                "litert_npu_compiler",
-                "litertlm_jni", 
-                "geniex_core",
-                "geniex-proc",
-                "geniex_vlm",
-                "geniex",
-                "geniex_plugin_llama_cpp",
-                "geniex_plugin_qairt"
-            ).forEach { lib ->
-                try {
-                    System.loadLibrary(lib)
-                    Log.i(TAG, "Successfully pre-loaded lib$lib.so")
-                } catch (e: Throwable) {
-                    Log.v(TAG, "Pre-load lib$lib.so note: ${e.message}")
+
+
+
+        private var librariesLoaded = false
+
+        fun ensureLibrariesLoaded() {
+            if (librariesLoaded) return
+            synchronized(this) {
+                if (librariesLoaded) return
+                Log.w(TAG, "==== SERENITY INFERENCE MANAGER PRE-LOADING RUNTIMES ====")
+                Log.i(TAG, "Logcat filter command: $LOGCAT_RECOMMENDED_FILTER")
+                listOf(
+                    "omp",
+                    "c++_shared", 
+                    "ggml-base", 
+                    "ggml", 
+                    "llama", 
+                    "serenity_llama",
+                    "QnnHtp", 
+                    "QnnSystem",
+                    "LiteRt", 
+                    "litert_jni", 
+                    "litert_dispatch", 
+                    "litert_npu_compiler",
+                    "litertlm_jni", 
+                    "geniex_core",
+                    "geniex-proc",
+                    "geniex_vlm",
+                    "geniex",
+                    "geniex_plugin_llama_cpp",
+                    "geniex_plugin_qairt"
+                ).forEach { lib ->
+                    try {
+                        System.loadLibrary(lib)
+                        Log.i(TAG, "Successfully pre-loaded lib$lib.so")
+                    } catch (e: Throwable) {
+                        Log.v(TAG, "Pre-load lib$lib.so note: ${e.message}")
+                    }
                 }
+                librariesLoaded = true
             }
         }
     }
@@ -192,6 +210,7 @@ class InferenceManager(
         config: ModelConfig = ModelConfig(),
         systemPrompt: String? = null
     ): Int = withContext(Dispatchers.IO) {
+        ensureLibrariesLoaded()
         unloadModelInternal()
 
         val modelFile = File(modelPath)
@@ -215,26 +234,115 @@ class InferenceManager(
         ExperimentalFlags.enableBenchmark = true
 
         // Strict Engine Routing
-        return@withContext if (isLiteRtFormat) {
-            Log.i(TAG, "Smart Select: .litertlm / .tflite format detected ($ext). Routing to LiteRT-LM.")
-            loadLiteRtModel(modelPath, backendMode, config)
-        } else if (actuallyGguf) {
-            Log.i(TAG, "Smart Select: GGUF format detected. Routing to Genie X (NPU) or llama.cpp.")
-            // Try Genie X first if NPU is allowed
-            if (backendMode != DeviceBackendMode.CPU) {
-                val genieRes = loadGenieModel(modelPath, backendMode, config)
-                if (genieRes == 0) return@withContext 0
+        return@withContext when {
+            isLiteRtFormat -> {
+                Log.i(TAG, "Smart Select: .litertlm / .tflite format detected ($ext). Routing to LiteRT-LM.")
+                loadLiteRtModel(modelPath, backendMode, config)
             }
-            loadLlamaModel(modelPath, backendMode, config)
-        } else {
-            // Unknown format, try all available
-            val litertRes = loadLiteRtModel(modelPath, backendMode, config)
-            if (litertRes == 0) return@withContext 0
-            
-            val genieRes = loadGenieModel(modelPath, backendMode, config)
-            if (genieRes == 0) return@withContext 0
-            
-            loadLlamaModel(modelPath, backendMode, config)
+            config.preferredEngine == EngineSelection.LLAMA_CPP -> {
+                Log.i(TAG, "Engine Override: LLAMA_CPP explicitly requested (Backend: $backendMode).")
+                when (backendMode) {
+                    DeviceBackendMode.NPU -> {
+                        Log.i(TAG, "NPU requested for LLAMA_CPP: Routing to Genie X SDK (Qualcomm llama.cpp bridge)...")
+                        val res = loadGenieModel(modelPath, DeviceBackendMode.NPU, config)
+                        if (res == 0) 0 else {
+                            val gpuRes = loadLlamaModel(modelPath, DeviceBackendMode.GPU, config)
+                            if (gpuRes == 0) 0 else loadLlamaModel(modelPath, DeviceBackendMode.CPU, config)
+                        }
+                    }
+                    DeviceBackendMode.GPU -> {
+                        loadLlamaModel(modelPath, DeviceBackendMode.GPU, config)
+                    }
+                    DeviceBackendMode.CPU -> {
+                        loadLlamaModel(modelPath, DeviceBackendMode.CPU, config)
+                    }
+                    DeviceBackendMode.AUTO -> {
+                        Log.i(TAG, "AUTO backend requested for LLAMA_CPP: Priority Genie X NPU -> llama.cpp HTP -> OpenCL -> CPU")
+                        
+                        // Try Genie X NPU first as it's the most likely way to get GGUF on NPU on Qualcomm
+                        val genieRes = loadGenieModel(modelPath, DeviceBackendMode.NPU, config)
+                        if (genieRes == 0) return@withContext 0
+                        
+                        // Fallback to native llama.cpp sequence
+                        val nRes = loadLlamaModel(modelPath, DeviceBackendMode.NPU, config)
+                        if (nRes == 0) 0 else {
+                            val gpuRes = loadLlamaModel(modelPath, DeviceBackendMode.GPU, config)
+                            if (gpuRes == 0) 0 else loadLlamaModel(modelPath, DeviceBackendMode.CPU, config)
+                        }
+                    }
+                }
+            }
+            config.preferredEngine == EngineSelection.GENIE_X -> {
+                Log.i(TAG, "Engine Override: GENIE_X explicitly requested.")
+                loadGenieModel(modelPath, backendMode, config)
+            }
+            config.preferredEngine == EngineSelection.LITERT_LM -> {
+                Log.i(TAG, "Engine Override: LITERT_LM explicitly requested.")
+                loadLiteRtModel(modelPath, backendMode, config)
+            }
+                    actuallyGguf -> {
+                Log.i(TAG, "Smart Select: GGUF format detected (backendMode=$backendMode, preferredEngine=${config.preferredEngine}).")
+                when (backendMode) {
+                    DeviceBackendMode.NPU -> {
+                        Log.d(TAG, "Targeting NPU via Genie X SDK or llama.cpp HTP...")
+                        val genieRes = loadGenieModel(modelPath, DeviceBackendMode.NPU, config)
+                        if (genieRes == 0) 0 else {
+                            val llamaHtpRes = loadLlamaModel(modelPath, DeviceBackendMode.NPU, config)
+                            if (llamaHtpRes == 0) 0 else loadLlamaModel(modelPath, DeviceBackendMode.CPU, config)
+                        }
+                    }
+                    DeviceBackendMode.GPU -> {
+                        Log.d(TAG, "Targeting GPU via Genie X GPU or llama.cpp OpenCL...")
+                        val genieGpuRes = loadGenieModel(modelPath, DeviceBackendMode.GPU, config)
+                        if (genieGpuRes == 0) 0 else {
+                            val gpuRes = loadLlamaModel(modelPath, DeviceBackendMode.GPU, config)
+                            if (gpuRes == 0) 0 else loadLlamaModel(modelPath, DeviceBackendMode.CPU, config)
+                        }
+                    }
+                    DeviceBackendMode.CPU -> {
+                        loadLlamaModel(modelPath, DeviceBackendMode.CPU, config)
+                    }
+                    DeviceBackendMode.AUTO -> {
+                        Log.d(TAG, "Attempting Priority 1: NPU via Genie X SDK...")
+                        val genieRes = loadGenieModel(modelPath, DeviceBackendMode.NPU, config)
+                        if (genieRes == 0) 0 else {
+                            Log.i(TAG, "Genie X NPU unavailable/failed, trying Priority 2: native llama.cpp HTP (NPU)...")
+                            val llamaHtpRes = loadLlamaModel(modelPath, DeviceBackendMode.NPU, config)
+                            if (llamaHtpRes == 0) 0 else {
+                                Log.i(TAG, "llama.cpp HTP unavailable/failed, trying Priority 3: Genie X GPU / llama.cpp OpenCL...")
+                                val genieGpuRes = loadGenieModel(modelPath, DeviceBackendMode.GPU, config)
+                                if (genieGpuRes == 0) 0 else {
+                                    val gpuRes = loadLlamaModel(modelPath, DeviceBackendMode.GPU, config)
+                                    if (gpuRes == 0) 0 else {
+                                        Log.i(TAG, "GPU accelerators unavailable, falling back to Priority 4: CPU via llama.cpp...")
+                                        loadLlamaModel(modelPath, DeviceBackendMode.CPU, config)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else -> {
+                // Unknown format, try available engines with strict fallback: NPU -> CPU
+                Log.i(TAG, "Smart Select: Unknown format. Priority: LiteRT (NPU) -> Genie (NPU) -> CPU.")
+                
+                // LiteRT-LM (NPU or CPU)
+                val litertRes = loadLiteRtModel(modelPath, backendMode, config)
+                if (litertRes == 0) return@withContext 0
+                
+                // Genie X (NPU only in AUTO mode)
+                val genieRes = loadGenieModel(modelPath, if (backendMode == DeviceBackendMode.AUTO) DeviceBackendMode.NPU else backendMode, config)
+                if (genieRes == 0) return@withContext 0
+                
+                // Absolute Last Resort: CPU
+                if (backendMode == DeviceBackendMode.AUTO || backendMode == DeviceBackendMode.CPU) {
+                    Log.w(TAG, "SEVERE COMPATIBILITY FALLBACK: All accelerators failed, switching to llama.cpp (CPU)")
+                    loadLlamaModel(modelPath, DeviceBackendMode.CPU, config)
+                } else {
+                    -1
+                }
+            }
         }
     }
 
@@ -243,12 +351,12 @@ class InferenceManager(
         backendMode: DeviceBackendMode = DeviceBackendMode.AUTO,
         config: ModelConfig = ModelConfig()
     ): Int {
-        Log.d(TAG, "Loading GGUF via Qualcomm Genie X: $modelPath (Mode: $backendMode)")
+        Log.d(TAG, "Loading model via Qualcomm Genie X: $modelPath (Mode: $backendMode)")
         activeEngineType = EngineType.GENIE_X
         try {
             val sdk = GenieXSdk.getInstance()
             
-            val initResult = suspendCoroutine<Boolean> { continuation ->
+            val initResult = kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
                 sdk.init(context, object : GenieXSdk.InitCallback {
                     override fun onSuccess() {
                         Log.i(TAG, "GenieX SDK initialized successfully")
@@ -274,24 +382,40 @@ class InferenceManager(
             }
 
             val modelName = File(modelPath).nameWithoutExtension
-            
+            val ext = File(modelPath).extension.lowercase()
+            val isQairt = ext == "bin" || ext == "dlc" || ext == "zip"
+            val pluginId = if (isQairt) {
+                try { GenieXSdk.PLUGIN_ID_QAIRT } catch (_: Throwable) { "qairt" }
+            } else {
+                GenieXSdk.PLUGIN_ID_LLAMA_CPP
+            }
+
             val modelDir = File(modelPath).parentFile
             val tokenizerFile = File(modelDir, "tokenizer.model").takeIf { it.exists() }
                 ?: File(modelDir, "tokenizer.json").takeIf { it.exists() }
-            val tokenizerPath = tokenizerFile?.absolutePath ?: ""
-            if (tokenizerPath.isNotEmpty()) {
-                Log.i(TAG, "Found external tokenizer: $tokenizerPath")
-            }
+            val tokenizerPath = tokenizerFile?.absolutePath ?: modelPath
+            Log.i(TAG, "Genie X tokenizer path set to: $tokenizerPath, pluginId=$pluginId, isQairt=$isQairt")
 
             for (computeUnit in backendsToTry) {
-                Log.d(TAG, "Attempting Genie X build on ${computeUnit.name}")
+                Log.d(TAG, "Attempting Genie X build on ${computeUnit.name} (Code: ${computeUnit.value}) using pluginId=$pluginId")
                 
-                // Adjust layers: NPU/GPU usually want high layers for offloading, CPU wants 0
-                // CRITICAL FIX: Cap at 32 layers for large models (Gemma 4B+) to avoid HTP saturation (Error 0x80000414)
-                val layers = if (computeUnit == ComputeUnitValue.CPU) 0 else 32
+                // QAIRT bundles require nCtx=0 and nGpuLayers=0 (fixed at compile time in AI Hub bundle)
+                val layers = if (computeUnit == ComputeUnitValue.CPU || isQairt) 0 else {
+                    val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+                    val memInfo = android.app.ActivityManager.MemoryInfo()
+                    am?.getMemoryInfo(memInfo)
+                    val availGb = memInfo.availMem / (1024.0 * 1024.0 * 1024.0)
+                    when {
+                        availGb >= 6.0 -> 999
+                        availGb >= 4.0 -> 32
+                        else -> 16
+                    }
+                }
+                val nCtxVal = if (isQairt) 0 else config.kvCacheSize
+                Log.d(TAG, "Genie X config: dynamic layers=$layers, nCtx=$nCtxVal")
                 
                 val genieConfig = GenieModelConfig(
-                    nCtx = config.kvCacheSize, 
+                    nCtx = nCtxVal, 
                     nGpuLayers = layers,
                     nThreads = 0 // Auto
                 )
@@ -312,7 +436,7 @@ class InferenceManager(
                     mmapSetter?.invoke(genieConfig, true)
                     faSetter?.invoke(genieConfig, true)
                     
-                    Log.i(TAG, "Genie X: Applied mmap=${mmapSetter?.name ?: "NOT FOUND"}, flash_attn=${faSetter?.name ?: "NOT FOUND"}") //TODO either remove or revisit this
+                    Log.i(TAG, "Genie X: Applied mmap=${mmapSetter?.name ?: "NOT FOUND"}, flash_attn=${faSetter?.name ?: "NOT FOUND"}")
                 } catch (e: Exception) {
                     Log.w(TAG, "GenieConfig discovery failed: ${e.message}")
                 }
@@ -322,7 +446,7 @@ class InferenceManager(
                     model_path = modelPath,
                     tokenizer_path = tokenizerPath, 
                     config = genieConfig,
-                    runtime_id = GenieXSdk.PLUGIN_ID_LLAMA_CPP,
+                    runtime_id = pluginId,
                     compute_unit = computeUnit.value
                 )
 
@@ -331,8 +455,8 @@ class InferenceManager(
                 if (result.isSuccess) {
                     this.llmWrapper = result.getOrNull()
                     activeEngineType = EngineType.GENIE_X
-                    activeBackendName = "Genie X (${computeUnit.name})"
-                    Log.i(TAG, "Successfully initialized Genie X LlmWrapper for $modelName on ${computeUnit.name}")
+                    activeBackendName = "Genie X (${computeUnit.name} / $pluginId)"
+                    Log.i(TAG, "Successfully initialized Genie X LlmWrapper for $modelName on ${computeUnit.name} ($pluginId)")
                     
                     // Small delay to allow native background settle (avoid race on first inference)
                     delay(300)
@@ -352,46 +476,44 @@ class InferenceManager(
         }
     }
 
-    private suspend fun loadLlamaModel(modelPath: String, backendMode: DeviceBackendMode, config: ModelConfig): Int {
+    private fun loadLlamaModel(modelPath: String, backendMode: DeviceBackendMode, config: ModelConfig): Int {
         Log.d(TAG, "Loading model using llama.cpp engine: $modelPath (Backend: $backendMode)")
         activeEngineType = EngineType.LLAMA_CPP
         
-        val requestedLayers = when (backendMode) {
-            DeviceBackendMode.CPU -> 0
-            DeviceBackendMode.GPU -> 999 // Offload all layers to GPU if possible
-            DeviceBackendMode.AUTO -> 999
-            DeviceBackendMode.NPU -> 999 // llama.cpp uses GPU for acceleration on Android unless HEXAGON is enabled
+        // Leave at least one core for the UI thread and other background tasks
+        val threadCount = maxOf(1, minOf(3, Runtime.getRuntime().availableProcessors() - 1))
+        
+        val hintsToTry = when (backendMode) {
+            DeviceBackendMode.NPU -> listOf("HTP", "CPU")
+            DeviceBackendMode.GPU -> listOf("OpenCL", "CPU")
+            DeviceBackendMode.CPU -> listOf("CPU")
+            DeviceBackendMode.AUTO -> listOf("HTP", "OpenCL", "CPU")
         }
 
-        var usedLayers = requestedLayers
-        var res = LlamaAndroid.loadModel(
-            modelPath, 
-            requestedLayers, 
-            config.kvCacheSize, 
-            0, 
-            null,
-            config.kvQuantK.value,
-            config.kvQuantV.value
-        )
-        
-        if (res != 0 && requestedLayers > 0) {
-            Log.w(TAG, "llama.cpp GPU/Acceleration load failed (code $res), falling back to CPU (0 layers)...")
-            usedLayers = 0
+        var res = -1
+        for (backendHint in hintsToTry) {
+            val requestedLayers = if (backendHint == "CPU") 0 else 999
+            Log.d(TAG, "Attempting llama.cpp load with backendHint=$backendHint, requestedLayers=$requestedLayers")
             res = LlamaAndroid.loadModel(
                 modelPath, 
-                0, 
+                requestedLayers, 
                 config.kvCacheSize, 
-                0, 
+                threadCount, 
                 null,
                 config.kvQuantK.value,
-                config.kvQuantV.value
+                config.kvQuantV.value,
+                backendHint
             )
+            if (res == 0) break
         }
 
         if (res == 0) {
             activeEngineType = EngineType.LLAMA_CPP
-            activeBackendName = if (usedLayers > 0) "llama.cpp (GPU)" else "llama.cpp (CPU)"
-            Log.i(TAG, "Successfully loaded llama.cpp model")
+            activeBackendName = LlamaAndroid.getBackendName()
+            if (backendMode == DeviceBackendMode.CPU || (backendMode == DeviceBackendMode.AUTO && activeBackendName.contains("CPU"))) {
+                Log.w(TAG, "Running in SEVERE COMPATIBILITY MODE: CPU only. Performance will be limited.")
+            }
+            Log.i(TAG, "Successfully loaded llama.cpp model ($activeBackendName)")
             return 0
         } else {
             Log.e(TAG, "Failed to load llama.cpp model: $res")
@@ -423,7 +545,7 @@ class InferenceManager(
         } catch (_: Exception) {}
         
         // Aggressive reflection to override chat template and fix Jinja errors
-        val compatibleTemplate = "{% for message in messages %}<start_of_turn>{{message['role']}}\\n{{message['content']}}<end_of_turn>\\n{% endfor %}<start_of_turn>model\\n"
+        val compatibleTemplate = "{% for message in messages %}<start_of_turn>{{message['role']}}\n{{message['content']}}<end_of_turn>\n{% endfor %}<start_of_turn>model\n"
         
         // Try official ExperimentalFlags first if possible
         try {
@@ -432,10 +554,8 @@ class InferenceManager(
 
         listOf(conversationConfig, engine).forEach { obj ->
             try {
-                val templateSetter = obj::class.java.methods.find { it.name == "setPromptTemplate" || it.name.contains("Template", true) }
-                if (templateSetter != null) {
-                    templateSetter.invoke(obj, compatibleTemplate)
-                }
+                obj::class.java.methods.find { it.name == "setPromptTemplate" || it.name.contains("Template", true) }
+                    ?.invoke(obj, compatibleTemplate)
             } catch (_: Exception) {}
         }
 
@@ -443,7 +563,7 @@ class InferenceManager(
     }
 
     @OptIn(ExperimentalApi::class)
-    private suspend fun loadLiteRtModel(modelPath: String, backendMode: DeviceBackendMode, config: ModelConfig): Int {
+    private fun loadLiteRtModel(modelPath: String, backendMode: DeviceBackendMode, config: ModelConfig): Int {
         Log.d(TAG, "Loading model using LiteRT-LM engine: $modelPath")
         activeEngineType = EngineType.LITERT_LM
         val nativeLibDir = context.applicationInfo.nativeLibraryDir
@@ -459,7 +579,7 @@ class InferenceManager(
         } catch (_: Exception) {}
 
         val backendsToTry = when (backendMode) {
-            DeviceBackendMode.NPU -> if (npuSupported) listOf("NPU" to Backend.NPU(nativeLibraryDir = nativeLibDir)) else listOf("GPU" to Backend.GPU(), "CPU" to Backend.CPU())
+            DeviceBackendMode.NPU -> listOf("NPU" to Backend.NPU(nativeLibraryDir = nativeLibDir))
             DeviceBackendMode.GPU -> listOf("GPU" to Backend.GPU())
             DeviceBackendMode.CPU -> listOf("CPU" to Backend.CPU())
             DeviceBackendMode.AUTO -> {
@@ -467,7 +587,7 @@ class InferenceManager(
                 if (npuSupported) {
                     list.add("NPU" to Backend.NPU(nativeLibraryDir = nativeLibDir))
                 }
-                list.add("GPU" to Backend.GPU())
+                // GPU removed from AUTO to avoid driver crashes
                 list.add("CPU" to Backend.CPU())
                 list
             }
@@ -545,7 +665,7 @@ class InferenceManager(
 
                 // Try to enable native debug logging globally
                 try {
-                    com.google.ai.edge.litertlm.Engine.setNativeMinLogSeverity(com.google.ai.edge.litertlm.LogSeverity.VERBOSE)
+                    Engine.setNativeMinLogSeverity(com.google.ai.edge.litertlm.LogSeverity.VERBOSE)
                     Log.i(TAG, "Set LiteRT-LM native log severity to VERBOSE")
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to set native log severity: ${e.message}")
@@ -577,9 +697,6 @@ class InferenceManager(
         val prompt = history.lastOrNull { it.senderType == SenderType.USER }?.text ?: ""
         Log.d(TAG, "Generating response for prompt: ${prompt.take(50)}...")
         
-        // Pin the calling thread (coroutine) to performance cores
-        LlamaAndroid.setThreadAffinity()
-
         if (activeEngineType == EngineType.LITERT_LM) {
             // Re-initialize conversation if system prompt changed to avoid template prefix mismatch
             if (systemPrompt != currentSystemPrompt) {
@@ -609,24 +726,69 @@ class InferenceManager(
         } else if (activeEngineType == EngineType.GENIE_X) {
             llmWrapper?.let { wrapper ->
                 val formattedPrompt = applyChatTemplate(history, systemPrompt)
-                // Use a proper GenerationConfig with enough maxTokens and stop words to avoid tag leakage
                 val genConfig = com.geniex.sdk.bean.GenerationConfig(
-                    maxTokens = 2048,
-                    stopWords = arrayOf("<end_of_turn>", "</end_of_turn>", "<start_of_turn>", "</start_of_turn>", "<start_of_turn>user", "<start_of_turn>model", "<start_of_turn>system")
+                    maxTokens = currentConfig.maxTokens,
+                    stopWords = arrayOf(
+                        "<end_of_turn>", "<start_of_turn>", "<turn|>", "</s>", 
+                        "\nuser", "\nmodel", "<model>", "<user>", "<assistant>",
+                        "user\n", "model\n", "assistant\n", "### User:", "### Assistant:"
+                    )
                 )
+                
+                val fullResponseRaw = StringBuilder()
+                var lastCleanLength = 0
                 var stopTriggered = false
+
                 wrapper.generateStreamFlow(formattedPrompt, genConfig).collect { result ->
-                    if (stopTriggered) return@collect
-                    if (result is GenieStreamResult.Token) {
-                        val tokenText = result.text
-                        val cleanText = stripControlTags(tokenText)
-                        if (tokenText.contains("of_turn>") || tokenText.contains("<start_of_turn>") || tokenText.contains("<end_of_turn>")) {
-                            if (cleanText.isNotEmpty()) emit(cleanText)
-                            stopTriggered = true
-                            return@collect
+                    if (stopTriggered || (result as Any?) == null) return@collect
+                    
+                    when (result) {
+                        is GenieStreamResult.Token -> {
+                            val tokenText = result.text
+                            if (tokenText.isEmpty()) return@collect
+                            
+                            fullResponseRaw.append(tokenText)
+                            val currentRaw = fullResponseRaw.toString()
+                            
+                            val stopMatch = STOP_TAG_REGEX.find(currentRaw)
+                            if (stopMatch != null) {
+                                // Found stop tag, emit everything before it
+                                val textBeforeStop = currentRaw.substring(0, stopMatch.range.first)
+                                val cleanBefore = stripControlTags(textBeforeStop)
+                                val safeBefore = cleanBefore.replace(TRAILING_PARTIAL_TAG_REGEX, "")
+                                if (safeBefore.length > lastCleanLength) {
+                                    emit(safeBefore.substring(lastCleanLength))
+                                    lastCleanLength = safeBefore.length
+                                }
+                                stopTriggered = true
+                                return@collect
+                            }
+
+                            val cleanFull = stripControlTags(currentRaw)
+                            val safeFull = cleanFull.replace(TRAILING_PARTIAL_TAG_REGEX, "")
+                            if (safeFull.length > lastCleanLength) {
+                                val newText = safeFull.substring(lastCleanLength)
+                                emit(newText)
+                                lastCleanLength = safeFull.length
+                            }
+                            kotlinx.coroutines.yield()
                         }
-                        if (cleanText.isNotEmpty()) emit(cleanText)
+                        is GenieStreamResult.Completed -> {
+                            Log.d(TAG, "GenieX stream completed successfully")
+                            stopTriggered = true
+                        }
+                        is GenieStreamResult.Error -> {
+                            val reason = result.throwable.message ?: result.throwable.toString()
+                            Log.e(TAG, "GenieX stream error: $reason")
+                            stopTriggered = true
+                        }
                     }
+                }
+
+                val finalClean = stripControlTags(fullResponseRaw.toString()).replace(TRAILING_PARTIAL_TAG_REGEX, "").trimEnd()
+                if (finalClean.length > lastCleanLength) {
+                    val remaining = finalClean.substring(lastCleanLength)
+                    if (remaining.isNotEmpty()) emit(remaining)
                 }
             }
         } else if (activeEngineType == EngineType.LLAMA_CPP) {
@@ -641,28 +803,77 @@ class InferenceManager(
                 penaltyFreq = currentConfig.frequencyPenalty,
                 penaltyPresent = currentConfig.presencePenalty
             )
+            
+            val fullResponseRaw = StringBuilder()
+            var lastCleanLength = 0
+            
             while (true) {
                 val token = LlamaAndroid.completion_loop()
                 if (token == "[EOS]" || token.isEmpty()) break
-                val cleanText = stripControlTags(token)
-                if (token.contains("of_turn>") || token.contains("<start_of_turn>") || token.contains("<end_of_turn>")) {
-                    if (cleanText.isNotEmpty()) emit(cleanText)
+                
+                fullResponseRaw.append(token)
+                val currentRaw = fullResponseRaw.toString()
+                
+                val stopMatch = STOP_TAG_REGEX.find(currentRaw)
+                if (stopMatch != null) {
+                    val textBeforeStop = currentRaw.substring(0, stopMatch.range.first)
+                    val cleanBefore = stripControlTags(textBeforeStop)
+                    val safeBefore = cleanBefore.replace(TRAILING_PARTIAL_TAG_REGEX, "")
+                    if (safeBefore.length > lastCleanLength) {
+                        emit(safeBefore.substring(lastCleanLength))
+                        lastCleanLength = safeBefore.length
+                    }
                     break
                 }
-                if (cleanText.isNotEmpty()) emit(cleanText)
-                delay(10)
+
+                val cleanFull = stripControlTags(currentRaw)
+                val safeFull = cleanFull.replace(TRAILING_PARTIAL_TAG_REGEX, "")
+                if (safeFull.length > lastCleanLength) {
+                    val newText = safeFull.substring(lastCleanLength)
+                    emit(newText)
+                    lastCleanLength = safeFull.length
+                }
+                
+                kotlinx.coroutines.yield()
+                delay(5)
+            }
+
+            val finalClean = stripControlTags(fullResponseRaw.toString()).replace(TRAILING_PARTIAL_TAG_REGEX, "").trimEnd()
+            if (finalClean.length > lastCleanLength) {
+                val remaining = finalClean.substring(lastCleanLength)
+                if (remaining.isNotEmpty()) emit(remaining)
             }
         }
     }.flowOn(Dispatchers.IO)
 
     fun stripControlTags(text: String): String = Companion.stripControlTags(text)
 
+    fun resetConversation(systemPrompt: String? = currentSystemPrompt) {
+        currentSystemPrompt = systemPrompt
+        if (activeEngineType == EngineType.LITERT_LM && engine != null) {
+            try {
+                conversation?.close()
+            } catch (_: Exception) {}
+            conversation = createLiteRtConversation(engine!!, currentConfig, currentSystemPrompt)
+            Log.i(TAG, "Reset LiteRT-LM conversation state.")
+        }
+    }
+
+    fun stripThoughtBlocks(text: String): String {
+        return text
+            .replace(Regex("(?s)<think>.*?</think>"), "")
+            .replace(Regex("(?s)<thought>.*?</thought>"), "")
+            .replace(Regex("(?is)<think>.*$"), "")
+            .replace(Regex("(?is)<thought>.*$"), "")
+            .replace(Regex("(?is)^.*?</think>"), "")
+            .replace(Regex("(?is)^.*?</thought>"), "")
+            .trim()
+    }
+
     private fun applyChatTemplate(history: List<ChatMessage>, systemPrompt: String? = null): String {
         val sb = StringBuilder()
         
-        // Gemma-style templates usually start with BOS
         sb.append("<bos>")
-
         if (!systemPrompt.isNullOrBlank()) {
             sb.append("<start_of_turn>system\n$systemPrompt<end_of_turn>\n")
         }
@@ -671,8 +882,16 @@ class InferenceManager(
         val contextHistory = history.filter { it.text != "..." }.takeLast(10)
         
         for (msg in contextHistory) {
-            val cleanText = stripControlTags(msg.text).trim()
+            var cleanText = stripControlTags(msg.text).trim()
             if (cleanText.isEmpty()) continue
+            
+            cleanText = cleanText.replace(Regex("(?i)^(?:user|model|system|assistant)\\n+"), "").trim()
+            if (cleanText.isEmpty()) continue
+            
+            if (msg.senderType == SenderType.BOT) {
+                cleanText = stripThoughtBlocks(cleanText)
+                if (cleanText.isEmpty()) continue
+            }
             
             when (msg.senderType) {
                 SenderType.USER -> sb.append("<start_of_turn>user\n$cleanText<end_of_turn>\n")
@@ -720,19 +939,29 @@ class InferenceManager(
 
     private fun unloadModelInternal() {
         try {
-            if (activeEngineType == EngineType.LITERT_LM) {
-                conversation?.close()
-                engine?.close()
-            } else if (activeEngineType == EngineType.GENIE_X) {
-                llmWrapper?.destroy()
-            } else if (activeEngineType == EngineType.LLAMA_CPP) {
-                LlamaAndroid.unloadModel()
+            when (activeEngineType) {
+                EngineType.LITERT_LM -> {
+                    conversation?.close()
+                    engine?.close()
+                }
+                EngineType.GENIE_X -> {
+                    llmWrapper?.destroy()
+                    // CRITICAL: Delay to allow Qualcomm kernel driver to release FastRPC handles
+                    Thread.sleep(100)
+                }
+                EngineType.LLAMA_CPP -> {
+                    LlamaAndroid.unloadModel()
+                    // CRITICAL: Delay to allow Adreno kernel driver (KGSL) to reset compute states
+                    Thread.sleep(100)
+                }
+                else -> {}
             }
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
             conversation = null
             engine = null
+            llmWrapper = null
             activeEngineType = EngineType.UNKNOWN
             activeBackendName = "NOT LOADED"
         }
@@ -744,6 +973,7 @@ class InferenceManager(
         if (!file.exists()) return "Model file missing: $path"
         val sizeMb = file.length() / (1024f * 1024f)
         return String.format(
+            java.util.Locale.US,
             "File: %s\nEngine: %s\nSize: %.2f MB\nBackend: %s\nState: %s",
             file.name,
             activeEngineType.name,

@@ -4,12 +4,93 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Version 1.6 - 2026-07-30
+## Version 1.0.0 - TBD
+Stable release
+
+## Version 0.9.0 - TBD
+Clear TODO list
+
+## Version 0.8.0 - TBD
+Resolve multimodal and MTP
+Fully fix the thought channel
+
+## Version 0.7.0 - 2026-08-01
+**Resolved engine support:**
+- NPU (Genie X & llama.cpp)
+- GPU (OpenCL & Genie X)
+- CPU (llama.cpp & Genie X)
+**Cleaned up tags and output**
+- Fixed regex and start/stop tag cleaning and an isue where the model would persist tags or responses.
+
+- **Data Escape & Ghost Mode Storage Patch**:
+  - Enhanced `stripThoughtBlocks` in `InferenceManager.kt` to filter trailing unclosed `<think>` / `<thought>` tags and leading orphan closing tags from multi-turn context.
+  - Implemented dynamic session disk purge in `ChatViewModel.kt` when `isGhostMode` is toggled `true` mid-session.
+
+## Version 0.6.4 - 2026-08-01
+
+- **Gemma BOS Token & Control Tag Leakage Fix**:
+  - Added `<bos>` token prefix to `applyChatTemplate` in [InferenceManager.kt](file:///s:/AndroidStudioProjects/SerenityDroid/app/src/main/java/com/example/serenitydroid/engine/InferenceManager.kt) so Gemma models align turn boundaries in `llama.cpp`.
+  - Fixed `CONTROL_TAG_REGEX` regex in `InferenceManager.kt` to avoid stripping `<s` from `<start_of_turn>` (resolving `tart_of_` leakage).
+  - Added `start_of_turn` fallback checks to `isStopTag` in `InferenceManager.kt` and native `completion_loop` in [llama-android.cpp](file:///s:/AndroidStudioProjects/SerenityDroid/app/src/main/cpp/llama-android.cpp).
+- **Chat History Contamination & Prompt Repetition Fix**:
+  - Sanitized control tags and orphan role headers (`user\n`, `system\n`, `model\n`) in `InferenceManager.kt` (`CONTROL_TAG_REGEX`, `stripControlTags`, `applyChatTemplate`) to prevent model output leakage from polluting context memory in multi-turn chats.
+  - Fixed typo (`art_of`) in stop tag patterns and made stop tag detection (`isStopTag` and C++ `completion_loop` in `llama-android.cpp`) precise to turn boundaries (`<start_of_turn>`, `<end_of_turn>`, `<|eot_id|>`, etc.).
+  - Added `resetConversation()` to `InferenceManager.kt` and wired it into `ChatViewModel.kt` (`clearCurrentSession`, `createNewSession`, `loadSession`, `setSelectedLevel`) to reset LiteRT-LM conversation state when switching or clearing chats.
+  - Fixed Jinja chat template newline escaping in LiteRT-LM reflection overrides.
+- **Thinking Channel Separation & Parsing**:
+  - Stopped `InferenceManager.kt` (`CONTROL_TAG_REGEX`) from stripping `<think>`/`</think>` and `<thought>`/`</thought>` tags during token streaming so reasoning tokens reach UI state.
+  - Expanded `SerenityHomeScreen.kt` thought parser to handle both `<think>` and `<thought>` tag formats for collapsible "Thought Process" cards.
+  - Added `stripThoughtBlocks` in `applyChatTemplate` to strip scratchpad thinking blocks from assistant history turns, preserving context window tokens and avoiding reasoning recursion.
+- **Ghost Mode (Ephemeral Session)**: Added toggle in `SettingsScreen.kt` and `SettingsRepository.kt` (`isGhostMode`) preventing session and message JSON persistence to disk when enabled.
+- **History Lookup Mode (ALL, SESSION, NONE)**: Added chip selector in `SettingsScreen.kt` and state handling in `ChatViewModel.kt` (`historyLookupMode`) allowing users to restrict prompt context history to ALL, SESSION only, or NONE (zero past turns).
+- **GenieX Null Result Filtering & Configurable Max Tokens**: Enhanced `GenieXSdk` stream collection in `InferenceManager.kt` to handle null/empty token payloads cleanly and wired dynamic `maxTokens` configuration from `ModelConfig` into `GenerationConfig`.
+- **Persona Prompt Refinements & Response Window Control**: Refined Level 1-7 system prompts in `ChatViewModel.kt` to keep responses structured and mobile-friendly (Level 1 fast/concise, Level 3 collaborative/non-bloated, Level 5 analytical/decisive). Added TODOs for Level 2 web/local search support and Level 7 adaptive cross-level learning.
+
+## Version 0.6.3 - 2026-07-31
+
+- **Control Tag Cutoff Resolution**: Implemented partial tag hold-back buffer (`PARTIAL_TAG_REGEX`) and expanded stop tag helper (`isStopTag`) in [InferenceManager.kt](file:///s:/AndroidStudioProjects/SerenityDroid/app/src/main/java/com/example/serenitydroid/engine/InferenceManager.kt) to hold back unclosed trailing tag prefixes (`<end_of_`, `<start_of_`, `<art_of_`) during streaming, preventing split tokens from leaking to the UI before stream termination.
+- **Native Fragment Stop Detection**: Updated `completion_loop` in [llama-android.cpp](file:///s:/AndroidStudioProjects/SerenityDroid/app/src/main/cpp/llama-android.cpp) to case-insensitively intercept fragment stop tokens (`end_of`, `start_of`, `art_of`, `of_turn`, `turn|`, `</s>`, `eot_id`, `im_end`).
+
+- **OpenCL Linker Fix**: Added stub implementation `libOpenCL_stub.c` to satisfy linker and conditionally built it in `CMakeLists.txt` for `llama.cpp`. Configured `build.gradle.kts` to exclude dummy `libOpenCL.so` from APK to use device system library at runtime.
+- **Unified Hardware Acceleration**: Refactored JNI backend (`g_last_accel_state`) to support NPU (Hexagon/HTP) alongside OpenCL. Status reporting dynamically identifies `llama.cpp (Hardware Accelerated)`.
+- **NPU (Hexagon/HTP) Readiness**: Set `-DGGML_HEXAGON=ON` and packaged `libggml-htp-*.so` libraries for Snapdragon 8 Elite/Gen 3 native kernels.
+- **Full NPU & GPU Fallback Cascade**:
+  - **Genie X QAIRT Plugin Handling**: Configured `loadGenieModel` to set `runtime_id = "qairt"` (or `GenieXSdk.PLUGIN_ID_QAIRT`) and zero out `nCtx` & `nGpuLayers` for `.bin`, `.dlc`, and `.zip` Qualcomm AI Hub bundles per official specifications.
+  - **Genie X OpenCL GPU Offloading**: Re-enabled `ComputeUnitValue.GPU` in `loadGenieModel` for GPU backend mode requests.
+  - **Native llama.cpp HTP & OpenCL Cascade**: Updated `loadLlamaModel` and `Smart Select` cascade logic in `InferenceManager.kt` to iterate cleanly across **Genie X NPU** -> **Native llama.cpp HTP (NPU)** -> **Genie X GPU (OpenCL)** -> **Native llama.cpp OpenCL (GPU)** -> **CPU Fallback**.
+- **Hexagon SDK Path Resolution**: Updated `-DHEXAGON_SDK_ROOT` in `app/build.gradle.kts` to dynamically evaluate `${System.getenv("HEXAGON_SDK_ROOT")}` or fall back to installed Qualcomm AI Stack path `C:/Qualcomm/AIStack/QAIRT/2.31.0.250130`.
+
+## Version 0.6.2 - 2026-07-31
+
+- **NPU & GPU Acceleration Alignment**:
+  - **NPU via Genie X (llama.cpp)**: Routed GGUF model execution on NPU to Qualcomm Genie X SDK (`GenieXSdk.PLUGIN_ID_LLAMA_CPP`), leveraging Hexagon 8 Tensor Processor (HTP) hardware acceleration.
+  - **GPU via OpenCL (llama.cpp)**: Configured GPU acceleration for `llama.cpp` using native OpenCL backend via JNI (`serenity_llama`), explicitly disabling Vulkan (`GGML_VULKAN=OFF`) to ensure Adreno GPU stability.
+  - **Dynamic Layer Offloading**: Implemented real-time system RAM checks upon loading to dynamically set offload layer targets (16, 32, or 999/full offload) for Genie X NPU/GPU execution.
+  - **OpenCL GPU Auto Routing**: Fixed `LLAMA_CPP` engine and `AUTO` backend mode in `InferenceManager.kt` which previously hardcoded `requestedLayers = 0` and `backendHint = "CPU"`. `AUTO` mode now attempts OpenCL GPU acceleration first (`requestedLayers = 999`, `backendHint = "OpenCL"`), falling back to CPU only if GPU initialization fails.
+  - **Dual Runtime Support**: Retained LiteRT-LM for `.litertlm` and `.tflite` model formats as a secondary execution engine alongside `llama.cpp`.
+
+## Version 0.6.1 - 2026-07-31
+
+- **OpenCL GPU Backend Migration**: Switched `llama.cpp` GPU build backend from Vulkan (`-DGGML_VULKAN=OFF`) to OpenCL (`-DGGML_OPENCL=ON`) in `app/build.gradle.kts` and updated JNI backend hints in `llama-android.cpp` and `InferenceManager.kt` to resolve Adreno driver instability and Vulkan shader crashes.
+
+- **Accurate Backend Status Reporting**: Replaced hardcoded `#if defined(GGML_USE_VULKAN)` macro check in `llama-android.cpp`'s `getBackendName()` with runtime `g_last_vulkan_state` verification, eliminating false "llama.cpp (Vulkan GPU)" label reports when running on CPU or NPU fallback.
+- **Vulkan Driver Crash Resolution**: Set explicit `GGML_DISABLE_VULKAN=1` environment variable in `llama-android.cpp` whenever CPU or NPU modes are targeted, preventing `ggml-vulkan` compute pipeline shader creation from failing and triggering SIGABRT on Adreno GPUs.
+- **Smart Engine AUTO Routing**: Hard-coded strict hardware fallback cascade for GGUF models: **Priority 1: Genie X / QNN NPU** -> **Priority 2: llama.cpp Vulkan GPU** -> **Priority 3: llama.cpp CPU** (only if Vulkan pipeline creation fails).
+- **Main Thread Stutter / Jank Elimination**: Refactored `InferenceManager.kt` native library pre-loader to execute lazily on background `Dispatchers.IO` threads, removing 19 synchronous `System.loadLibrary` calls from the UI main thread during app launch.
+- **Double BOS Token Warning**: Removed manual `<bos>` tag prepending from `applyChatTemplate` in `InferenceManager.kt` and disabled `add_special` tokenization in `llama-android.cpp` when handling pre-formatted prompt templates.
+
+## Version 0.6.0 - 2026-07-30
 
 ### The "Snapdragon Elite" Update
 
 This release brings massive performance improvements and a much-requested overhaul to how you interact with Serenity. We've moved beyond "just working" to feeling truly snappy on the latest hardware.
 
+- **GPU & CPU Hardware Acceleration Restored**:
+    - Re-enabled `-DGGML_VULKAN=ON` build flag in `app/build.gradle.kts` for native Vulkan GPU offloading on Adreno/Mali GPUs in `llama.cpp`.
+    - Added automatic `glslc` NDK executable resolution in `app/src/main/cpp/CMakeLists.txt` (`${ANDROID_NDK}/shader-tools/${ANDROID_HOST_TAG}/glslc`) and argument double-quoting in `vulkan-shaders-gen.cpp` to resolve Windows `CreateProcessA` failures across 427 Vulkan shader targets.
+    - Optimized CPU inference thread count in `llama-android.cpp` and `InferenceManager.kt` to match performance core count (4 threads), eliminating thread contention and cache thrashing on big.LITTLE ARM chips.
+    - Updated `InferenceManager.kt` routing to honor `preferredEngine` overrides and route explicit `GPU`/`CPU` requests directly to native `llama.cpp` while preserving the Genie X NPU magic pipeline.
+    - Aligned chat prompt tags and control tag stripping across `llama.cpp`, `LiteRT-LM`, and `Genie X`.
 - **NPU Power Unlocked**: Full support for Snapdragon 8 Elite (SM8750) and 8 Gen 3 (SM8650) via the Qualcomm AI Stack. If you're on a modern flagship, expect blazing fast, power-efficient inference that doesn't melt your battery.
 - **Smart Engine Routing**: Serenity now automatically picks the best tool for the job. Whether it's LiteRT-LM, Genie X, or llama.cpp, we route your models to the engine that will run them fastest on your specific device.
 - **Session History & Management**: Your chats are now saved automatically! Swipe open the new session overlay to switch between different conversations, or start fresh whenever you want.
@@ -24,7 +105,7 @@ This release brings massive performance improvements and a much-requested overha
     - Optimized KV Cache management with quantization support (F16 down to Q4_0).
     - Better error handling for model loading and engine fallbacks.
 
-## Version 1.5.4 Alpha - 2026-07-30
+## Version 0.5.4 Alpha - 2026-07-30
 
 ### Added
 
@@ -51,7 +132,7 @@ This release brings massive performance improvements and a much-requested overha
 - Fixed `AnimatedVisibility` implicit receiver call error in [SerenityHomeScreen.kt](file:///S:/AndroidStudioProjects/SerenityDroid/app/src/main/java/com/example/serenitydroid/ui/SerenityHomeScreen.kt) inside `Box` scope by using explicit `this@Column.` receiver.
 - Resolved missing reference `getSystemMemoryStats` in [SerenityHomeScreen.kt](file:///S:/AndroidStudioProjects/SerenityDroid/app/src/main/java/com/example/serenitydroid/ui/SerenityHomeScreen.kt) by implementing `getSystemMemoryStats()` on [ChatViewModel.kt](file:///S:/AndroidStudioProjects/SerenityDroid/app/src/main/java/com/example/serenitydroid/ChatViewModel.kt).
 
-## Version 1.5.3 Alpha - 2026-07-30
+## Version 0.5.3 Alpha - 2026-07-30
 
 ### Fixed
 
@@ -61,7 +142,7 @@ This release brings massive performance improvements and a much-requested overha
 - Refined native library pre-loading order in `InferenceManager.kt` (`omp`, `ggml-base`, `ggml`, `llama`, `litert_dispatch`, `geniex_plugin_llama_cpp`) to resolve OpenMP `__kmpc_dispatch_deinit` symbol lookup errors.
 - Added `LOGCAT_RECOMMENDED_FILTER` constant in `InferenceManager.kt` (`adb logcat -s InferenceManager:V GenieXSdk:V LlamaNative:V *:S`) for noise reduction.
 
-## Version 1.5.2 Alpha - 2026-07-29
+## Version 0.5.2 Alpha - 2026-07-29
 
 ### Fixed
 
@@ -83,7 +164,7 @@ This release brings massive performance improvements and a much-requested overha
 - Added Gemma prompt template formatting (`<start_of_turn>user\n...<end_of_turn>\n<start_of_turn>model\n`) in `applyLlamaTemplate` for `llama.cpp` inference.
 - Created technical implementation plan `implementation_plan.md` for full inference engine SPI refactoring.
 
-## Version 1.5.1 Alpha - 2026-07-28
+## Version 0.5.1 Alpha - 2026-07-28
 
 ### Added
 
@@ -91,7 +172,7 @@ This release brings massive performance improvements and a much-requested overha
 - Enabled native Hexagon HTP NPU hardware acceleration for standard `.gguf` models (e.g., Gemma-4 E2B & E4B QAT GGUFs) via `GenieEngine` and `libggml-qnn.so`.
 - Updated `ModelRefresher.kt` dynamic engine matching logic to prioritize NPU execution for GGUF models on NPU-capable Snapdragon devices.
 
-## Version 1.5.0 Alpha - 2026-07-25
+## Version 0.5.0 Alpha - 2026-07-25
 
 ### Added
 
@@ -105,7 +186,7 @@ This release brings massive performance improvements and a much-requested overha
 - Implemented generation stats tracking in `ChatViewModel.kt` displaying Time-To-First-Token (TTFT), Decode Speed (t/s), and Latency during streaming.
 - Enabled splittable K and V cache configuration internally in `LiteRtManager.kt` via reflection for Edge models that support it.
 
-## Version 1.4.21 Alpha - 2026-07-25
+## Version 0.4.21 Alpha - 2026-07-25
 
 ### Added
 
@@ -117,7 +198,7 @@ This release brings massive performance improvements and a much-requested overha
 - Fixed `Invalid catalog definition` error in `gradle/libs.versions.toml` by pointing `androidx-recyclerview` `version.ref` to `recyclerview` instead of `recyclerviewVersion`.
 - Fixed post-response app crash in `LiteRtManager.kt` by launching response flow collection within callbackFlow scope instead of an unmanaged `CoroutineScope(Dispatchers.IO)`.
 
-## Version 1.4.20 Alpha - 2026-07-24
+## Version 0.4.20 Alpha - 2026-07-24
 
 ### Added
 

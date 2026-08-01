@@ -13,6 +13,12 @@ import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 import javax.inject.Singleton
 
+enum class HistoryLookupMode {
+    ALL,
+    SESSION,
+    NONE
+}
+
 data class SettingsData(
     val backendMode: DeviceBackendMode = DeviceBackendMode.AUTO,
     val isAutoLoadOnStartup: Boolean = false,
@@ -43,7 +49,10 @@ data class SettingsData(
     val enableLvl6: Boolean = false,
     val enableLvl7: Boolean = false,
     val isStickyBottomScroll: Boolean = true,
-    val enablePersonaBackground: Boolean = true
+    val enablePersonaBackground: Boolean = true,
+    val showThinkingProcess: Boolean = true,
+    val isGhostMode: Boolean = false,
+    val historyLookupMode: HistoryLookupMode = HistoryLookupMode.SESSION
 )
 
 @Singleton
@@ -64,6 +73,8 @@ class SettingsRepository @Inject constructor(
         val backendMode = runCatching { DeviceBackendMode.valueOf(prefs.getString("backend_mode", DeviceBackendMode.AUTO.name)!!) }.getOrDefault(DeviceBackendMode.AUTO)
         val engineStr = prefs.getString("preferred_engine", "AUTO") ?: "AUTO"
         val preferredEngine = try { com.example.serenitydroid.engine.EngineSelection.valueOf(engineStr) } catch (_: Exception) { com.example.serenitydroid.engine.EngineSelection.AUTO }
+        val lookupStr = prefs.getString("history_lookup_mode", HistoryLookupMode.SESSION.name) ?: HistoryLookupMode.SESSION.name
+        val historyLookupMode = try { HistoryLookupMode.valueOf(lookupStr) } catch (_: Exception) { HistoryLookupMode.SESSION }
 
         return SettingsData(
             backendMode = backendMode,
@@ -95,7 +106,10 @@ class SettingsRepository @Inject constructor(
             enableLvl6 = prefs.getBoolean("enable_lvl_6", false),
             enableLvl7 = prefs.getBoolean("enable_lvl_7", false),
             isStickyBottomScroll = prefs.getBoolean("is_sticky_bottom_scroll", true),
-            enablePersonaBackground = prefs.getBoolean("enable_persona_background", true)
+            enablePersonaBackground = prefs.getBoolean("enable_persona_background", true),
+            showThinkingProcess = prefs.getBoolean("show_thinking_process", true),
+            isGhostMode = prefs.getBoolean("is_ghost_mode", false),
+            historyLookupMode = historyLookupMode
         )
     }
 
@@ -139,6 +153,9 @@ class SettingsRepository @Inject constructor(
             putBoolean("enable_lvl_7", data.enableLvl7)
             putBoolean("is_sticky_bottom_scroll", data.isStickyBottomScroll)
             putBoolean("enable_persona_background", data.enablePersonaBackground)
+            putBoolean("show_thinking_process", data.showThinkingProcess)
+            putBoolean("is_ghost_mode", data.isGhostMode)
+            putString("history_lookup_mode", data.historyLookupMode.name)
             apply()
         }
     }
