@@ -27,7 +27,16 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++17"
-                arguments += listOf("-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON", "-DGGML_OPENCL=OFF", "-DGGML_VULKAN=OFF", "-DGGML_HEXAGON=OFF", "-DGGML_OPENMP=ON")
+                arguments += listOf(
+                    "-DANDROID_STL=c++_shared",
+                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                    "-DGGML_OPENCL=ON",
+                    "-DGGML_VULKAN=OFF",
+                    "-DGGML_HEXAGON=OFF",
+                    "-DHEXAGON_SDK_ROOT=${System.getenv("HEXAGON_SDK_ROOT") ?: "C:/Qualcomm/AIStack/QAIRT/2.31.0.250130"}",
+                    "-DGGML_OPENMP=ON",
+                    "-DPython3_EXECUTABLE=C:/Users/ccrg6/AppData/Local/Microsoft/WindowsApps/python.exe"
+                )
             }
         }
     }
@@ -72,6 +81,7 @@ android {
         }
         jniLibs {
             useLegacyPackaging = true
+            excludes += "**/libOpenCL.so"
             pickFirsts.add("**/libQnn*.so")
             pickFirsts.add("**/libGenie*.so")
             pickFirsts.add("**/libomp.so")
@@ -80,6 +90,7 @@ android {
             pickFirsts.add("**/libLiteRtDispatch_Qualcomm.so")
             pickFirsts.add("**/liblitertlm_jni.so")
             pickFirsts.add("**/liblitert_jni.so")
+            pickFirsts.add("**/libggml-htp-*.so")
         }
     }
 
@@ -98,9 +109,10 @@ android {
         description = "Consolidates all native libraries (QAIRT SDK + LiteRT AARs) into the build folder with proper ARM64 filtering."
         
         // Source paths
+        val toolsDir = File("C:/Users/ccrg6/Desktop/Desktop/Tools")
         val qnnSDKLocalPath = "C:\\Qualcomm\\AIStack\\QAIRT\\2.31.0.250130"
-        val jitV79LibsPath = project.rootProject.file("litert_npu_runtime_libraries_jit/qualcomm_runtime_v79/src/main/jni/arm64-v8a")
-        val jitV81LibsPath = project.rootProject.file("litert_npu_runtime_libraries_jit/qualcomm_runtime_v81/src/main/jni/arm64-v8a")
+        val jitV79LibsPath = File(toolsDir, "litert_npu_runtime_libraries_jit/qualcomm_runtime_v79/src/main/jni/arm64-v8a")
+        val jitV81LibsPath = File(toolsDir, "litert_npu_runtime_libraries_jit/qualcomm_runtime_v81/src/main/jni/arm64-v8a")
         val arm64Dir = libsDir.get().dir("arm64-v8a").asFile
 
         doLast {
@@ -190,7 +202,7 @@ android {
                 }
                 into(arm64Dir)
             }
-            
+
             println("[PrepareNative] Sync complete. ARM64 directory: ${arm64Dir.absolutePath}")
         }
     }

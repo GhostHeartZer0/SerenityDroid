@@ -21,11 +21,14 @@ object LlamaAndroid {
         nThreads: Int, 
         mmprojPath: String? = null,
         kvQuantK: Int = 1,
-        kvQuantV: Int = 1
+        kvQuantV: Int = 1,
+        backendHint: String? = null
     ): Int
     external fun unloadModel()
+    external fun deinitBackend()
     external fun isModelLoaded(): Boolean
     external fun getModelContextLength(): Int
+    external fun getBackendName(): String
     external fun completion_init(
         prompt: String,
         temp: Float = 0.7f,

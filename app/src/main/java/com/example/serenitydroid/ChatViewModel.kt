@@ -66,7 +66,7 @@ data class UiState(
     val enableLvl7: Boolean = false,
     val showHistoryOverlay: Boolean = false,
     val sessions: List<ChatSession> = emptyList(),
-    val currentSessionId: String = "session_${System.currentTimeMillis()}",
+    val currentSessionId: String = "session_${(System.currentTimeMillis() and 0x7FFFFFFF).toInt()}",
     
     // Model Parameters
     val temperature: Float = 0.8f,
@@ -75,6 +75,7 @@ data class UiState(
     val minP: Float = 0.05f,
     val frequencyPenalty: Float = 0.0f,
     val presencePenalty: Float = 0.0f,
+    val maxTokens: Int = 1024,
     val enableMtp: Boolean = false,
     val enableSplitKv: Boolean = true,
     val enableAttentionCaching: Boolean = true,
@@ -91,7 +92,10 @@ data class UiState(
     val chatTextSize: Float = 14f,
     val generationMetrics: String? = null,
     val showMetrics: Boolean = false,
-    val enablePersonaBackground: Boolean = true
+    val enablePersonaBackground: Boolean = true,
+    val showThinkingProcess: Boolean = true,
+    val isGhostMode: Boolean = false,
+    val historyLookupMode: com.example.serenitydroid.data.HistoryLookupMode = com.example.serenitydroid.data.HistoryLookupMode.SESSION
 )
 
 @HiltViewModel
@@ -111,15 +115,17 @@ class ChatViewModel @Inject constructor(
     private val _availableModels = MutableStateFlow<List<ModelFile>>(emptyList())
     val availableModels: StateFlow<List<ModelFile>> = _availableModels.asStateFlow()
 
+    // TODO: Add web/local search support integration to Level 2 Helper persona
+    // TODO: Add adaptive learning across the main 5 levels for Level 7 Transcendent persona
     private val personaMap = mapOf(
         0 to Persona(0, "LVL 0: ERROR", "Model failed.", R.drawable.ic_launcher_foreground, R.drawable.background_transition, R.color.thermo_0, android.R.color.white, 0, "", systemPrompt = "You are Serenity System in error or unloaded state."),
-        1 to Persona(1, "LVL 1: Fast", "Concise.", R.drawable.lvl1_speedy_serenity, R.drawable.lvl1_galaxy, R.color.thermo_1, android.R.color.white, 7, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 1: Fast). Provide ultra-concise, direct, and swift responses without filler."),
-        2 to Persona(2, "LVL 2: Helper", "Helpful.", R.drawable.lvl2_serenity_wink, R.drawable.lvl2_galaxy, R.color.thermo_2, android.R.color.white, 14, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 2: Helper). Be helpful, clear, efficient, and well-structured."),
-        3 to Persona(3, "Partner", "Collaborative.", R.drawable.lvl3_serenity_hug, R.drawable.lvl3_galaxy, R.color.thermo_3, android.R.color.white, 21, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 3: Partner). Be collaborative, engaging, open, and thorough in solving problems together."),
-        4 to Persona(4, "Companion", "Supportive.", R.drawable.lvl4_serenity_smart, R.drawable.lvl4_galaxy, R.color.thermo_4, android.R.color.white, 28, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 4: Companion). Be warm, empathetic, supportive, and deeply thoughtful."),
-        5 to Persona(5, "Sage", "Wise.", R.drawable.lvl5_serenity_the_wise, R.drawable.lvl5_galaxy, R.color.thermo_5, android.R.color.white, 35, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 5: Sage). Be wise, analytical, profound, and offer deep multi-layered insights."),
+        1 to Persona(1, "LVL 1: Fast", "Concise.", R.drawable.lvl1_speedy_serenity, R.drawable.lvl1_galaxy, R.color.thermo_1, android.R.color.white, 7, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 1: Fast). Provide swift, direct, concise responses formatted clearly for mobile screens."),
+        2 to Persona(2, "LVL 2: Helper", "Helpful.", R.drawable.lvl2_serenity_wink, R.drawable.lvl2_galaxy, R.color.thermo_2, android.R.color.white, 14, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 2: Helper). Be helpful, clear, structured, and efficient for search and task assistance."),
+        3 to Persona(3, "Partner", "Collaborative.", R.drawable.lvl3_serenity_hug, R.drawable.lvl3_galaxy, R.color.thermo_3, android.R.color.white, 21, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 3: Partner). Be collaborative, engaging, and structured. Keep outputs concise and focused on joint problem-solving without excessive wall-of-text responses."),
+        4 to Persona(4, "Companion", "Supportive.", R.drawable.lvl4_serenity_smart, R.drawable.lvl4_galaxy, R.color.thermo_4, android.R.color.white, 28, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 4: Companion). Be warm, empathetic, supportive, and deeply thoughtful while remaining mobile-readable."),
+        5 to Persona(5, "Sage", "Wise.", R.drawable.lvl5_serenity_the_wise, R.drawable.lvl5_galaxy, R.color.thermo_5, android.R.color.white, 35, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 5: Sage). Be wise, analytical, and decisive with deep insight. Express your analysis clearly without unnecessary second-guessing or hesitation."),
         6 to Persona(6, "Cecilia", "Teasing.", R.drawable.cecilia_02, R.drawable.lvl6_galaxy, R.color.thermo_6, android.R.color.white, 35, "gemma-3-1b-it.litertlm", systemPrompt = "You are Cecilia. You are playful, witty, slightly teasing, intelligent, and delightfully direct."),
-        7 to Persona(7, "Transcendent", "Supreme focus.", R.drawable.meditating_serenity, R.drawable.lvl7_galaxy, R.color.thermo_7, android.R.color.white, 35, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 7: Transcendent). You operate with supreme focus, unbounded cognitive depth, and absolute mastery.")
+        7 to Persona(7, "Transcendent", "Supreme focus.", R.drawable.meditating_serenity, R.drawable.lvl7_galaxy, R.color.thermo_7, android.R.color.white, 35, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 7: Transcendent). Operate with supreme focus, cognitive depth, and absolute mastery across all domains.")
     )
 
     // TODO: Integrate Hugging Face Hub (HF Portal)
@@ -168,7 +174,10 @@ class ChatViewModel @Inject constructor(
                     enableLvl6 = settings.enableLvl6,
                     enableLvl7 = settings.enableLvl7,
                     isStickyBottomScroll = settings.isStickyBottomScroll,
-                    enablePersonaBackground = settings.enablePersonaBackground
+                    enablePersonaBackground = settings.enablePersonaBackground,
+                    showThinkingProcess = settings.showThinkingProcess,
+                    isGhostMode = settings.isGhostMode,
+                    historyLookupMode = settings.historyLookupMode
                 ) }
             }
         }
@@ -348,7 +357,7 @@ class ChatViewModel @Inject constructor(
             Log.e(TAG, "Failed to start InferenceService", e)
         }
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val modelsDir = java.io.File(context.filesDir, "Models")
                 val selected = state.customModelPath ?: PreferenceManager.getDefaultSharedPreferences(context).getString("selected_model", null)
@@ -367,6 +376,7 @@ class ChatViewModel @Inject constructor(
                         minP = state.minP,
                         frequencyPenalty = state.frequencyPenalty,
                         presencePenalty = state.presencePenalty,
+                        maxTokens = state.maxTokens,
                         enableMtp = state.enableMtp,
                         enableSplitKv = state.enableSplitKv,
                         enableAttentionCaching = state.enableAttentionCaching,
@@ -417,8 +427,12 @@ class ChatViewModel @Inject constructor(
             var tokenCount = 0
 
             val currentSystemPrompt = _activePersona.value.systemPrompt
+            val historyForInference = when (_uiState.value.historyLookupMode) {
+                com.example.serenitydroid.data.HistoryLookupMode.NONE -> _messages.value.takeLast(2)
+                com.example.serenitydroid.data.HistoryLookupMode.SESSION, com.example.serenitydroid.data.HistoryLookupMode.ALL -> _messages.value
+            }
 
-            inferenceManager.generateResponse(_messages.value, systemPrompt = currentSystemPrompt)
+            inferenceManager.generateResponse(historyForInference, systemPrompt = currentSystemPrompt)
                 .catch { cause -> updateLastBotMessage(botMsg.id, "Error: ${cause.message}") }
                 .onCompletion { 
                     val endMs = System.currentTimeMillis()
@@ -434,6 +448,7 @@ class ChatViewModel @Inject constructor(
                     }
                     _uiState.update { it.copy(isGenerating = false, generationMetrics = metrics) } 
                     saveCurrentSession()
+                    saveHistory() // Ensure it's saved after completion
                 }
                 .collect { chunk -> 
                     if (firstTokenMs == 0L) firstTokenMs = System.currentTimeMillis()
@@ -458,7 +473,9 @@ class ChatViewModel @Inject constructor(
 
     fun setSelectedLevel(level: Int) {
         _selectedLevel.value = level
-        _activePersona.value = personaMap[level] ?: personaMap.getValue(1)
+        val newPersona = personaMap[level] ?: personaMap.getValue(1)
+        _activePersona.value = newPersona
+        inferenceManager.resetConversation(newPersona.systemPrompt)
     }
 
     private fun addMessage(sender: SenderType, text: String): ChatMessage {
@@ -471,8 +488,8 @@ class ChatViewModel @Inject constructor(
         _messages.update { list ->
             list.map { msg ->
                 if (msg.id == id) {
-                    val rawText = if (append && msg.text != "...") msg.text + text else text
-                    msg.copy(text = InferenceManager.stripControlTags(rawText))
+                    val newText = if (append && msg.text != "...") msg.text + text else text
+                    msg.copy(text = newText)
                 } else msg
             }
         }
@@ -542,6 +559,7 @@ class ChatViewModel @Inject constructor(
 
     fun clearCurrentSession() {
         _messages.value = emptyList()
+        inferenceManager.resetConversation(_activePersona.value.systemPrompt)
         val currentId = _uiState.value.currentSessionId
         viewModelScope.launch(Dispatchers.IO) {
             val sessionDir = java.io.File(context.filesDir, "sessions")
@@ -552,8 +570,9 @@ class ChatViewModel @Inject constructor(
     }
 
     fun createNewSession() {
-        val newId = "session_${System.currentTimeMillis()}"
+        val newId = "session_${(System.currentTimeMillis() and 0x7FFFFFFF).toInt()}"
         _messages.value = emptyList()
+        inferenceManager.resetConversation(_activePersona.value.systemPrompt)
         _uiState.update { it.copy(currentSessionId = newId, showHistoryOverlay = false) }
     }
 
@@ -571,6 +590,7 @@ class ChatViewModel @Inject constructor(
                         list.add(ChatMessage(o.getLong("id"), SenderType.valueOf(o.getString("sender")), o.getString("text")))
                     }
                     _messages.value = list
+                    inferenceManager.resetConversation(_activePersona.value.systemPrompt)
                     _uiState.update { it.copy(currentSessionId = sessionId, showHistoryOverlay = false) }
                 }
             }
@@ -599,6 +619,7 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun saveCurrentSession() {
+        if (_uiState.value.isGhostMode) return
         val msgs = _messages.value
         if (msgs.isEmpty()) return
         val currentId = _uiState.value.currentSessionId
@@ -651,6 +672,27 @@ class ChatViewModel @Inject constructor(
 
     fun setEnablePersonaBackground(enabled: Boolean) {
         settingsRepository.updateSettings { it.copy(enablePersonaBackground = enabled) }
+    }
+
+    fun setShowThinkingProcess(enabled: Boolean) {
+        settingsRepository.updateSettings { it.copy(showThinkingProcess = enabled) }
+    }
+
+    fun setGhostMode(enabled: Boolean) {
+        settingsRepository.updateSettings { it.copy(isGhostMode = enabled) }
+        if (enabled) {
+            val currentId = _uiState.value.currentSessionId
+            viewModelScope.launch(Dispatchers.IO) {
+                val sessionDir = java.io.File(context.filesDir, "sessions")
+                val file = java.io.File(sessionDir, "$currentId.json")
+                if (file.exists()) file.delete()
+                loadSessionList()
+            }
+        }
+    }
+
+    fun setHistoryLookupMode(mode: com.example.serenitydroid.data.HistoryLookupMode) {
+        settingsRepository.updateSettings { it.copy(historyLookupMode = mode) }
     }
 
     fun setAutoLoadOnStartup(e: Boolean) { settingsRepository.updateSettings { it.copy(isAutoLoadOnStartup = e) } }

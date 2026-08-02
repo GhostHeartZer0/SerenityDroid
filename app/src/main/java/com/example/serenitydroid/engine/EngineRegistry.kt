@@ -3,7 +3,6 @@ package com.example.serenitydroid.engine
 import android.content.Context
 import android.system.Os
 import android.util.Log
-import com.google.android.play.core.splitinstall.SplitInstallManagerFactory
 import java.io.File
 
 object EngineRegistry {
@@ -31,9 +30,6 @@ object EngineRegistry {
         cachedNativeLibDir = nativeLibDir
         val libDirFile = File(nativeLibDir)
 
-        val splitManager = SplitInstallManagerFactory.create(context)
-        val genieModuleInstalled = splitManager.installedModules.contains("serenity_npu")
-
         // Hint ADSP search path for Qualcomm HTP
         try {
             Os.setenv("ADSP_LIBRARY_PATH", "$nativeLibDir;/vendor/lib/rfsa/adsp;/system/lib/rfsa/adsp;/dsp", true)
@@ -49,8 +45,11 @@ object EngineRegistry {
         hasQnnHtp = File(libDirFile, "libQnnHtp.so").exists()
         hasOpenMp = File(libDirFile, "libomp.so").exists() || File(libDirFile, "libgomp.so").exists() || File(libDirFile, "libiomp5.so").exists()
 
-        isNpuSupported = genieModuleInstalled && hasGenieXCore && hasLlamaPlugin
+        // NPU is supported if essential GenieX/QNN cores are present, OR if LiteRT NPU dispatch is present
+        val hasLiteRtNpu = File(libDirFile, "liblitert_dispatch.so").exists()
+        isNpuSupported = (hasGenieXCore && hasLlamaPlugin) || hasQnnHtp || hasLiteRtNpu
+        
         isInitialized = true
-        Log.i(TAG, "EngineRegistry initialized: NPU=$isNpuSupported, GenieCore=$hasGenieXCore, QNN=$hasQnnHtp")
+        Log.i(TAG, "EngineRegistry initialized: NPU=$isNpuSupported (GenieCore=$hasGenieXCore, QNN=$hasQnnHtp, LiteRT_NPU=$hasLiteRtNpu)")
     }
 }

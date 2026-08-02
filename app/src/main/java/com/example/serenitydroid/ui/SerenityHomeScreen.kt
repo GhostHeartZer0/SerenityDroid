@@ -1,21 +1,80 @@
 package com.example.serenitydroid.ui
 
-import androidx.compose.animation.*
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import com.example.serenitydroid.engine.InferenceManager
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.SyncAlt
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,7 +93,12 @@ import com.example.serenitydroid.ChatViewModel
 import com.example.serenitydroid.model.ChatMessage
 import com.example.serenitydroid.model.Persona
 import com.example.serenitydroid.model.SenderType
-import com.example.serenitydroid.ui.theme.*
+import com.example.serenitydroid.ui.theme.SerenityAccent
+import com.example.serenitydroid.ui.theme.SerenityBackground
+import com.example.serenitydroid.ui.theme.SerenityError
+import com.example.serenitydroid.ui.theme.SerenityInference
+import com.example.serenitydroid.ui.theme.SerenitySurface
+import com.example.serenitydroid.ui.theme.SerenityTextDim
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -144,7 +208,7 @@ fun SerenityHomeScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(messages) { message ->
-                        ChatMessageItem(message, uiState.chatTextSize)
+                        ChatMessageItem(message, uiState.chatTextSize, uiState.showThinkingProcess)
                     }
                 }
                 
@@ -271,7 +335,7 @@ fun PersonaHeader(persona: Persona, modelStatus: String, isModelLoaded: Boolean)
 }
 
 @Composable
-fun ChatMessageItem(message: ChatMessage, textSize: Float) {
+fun ChatMessageItem(message: ChatMessage, textSize: Float, showThinking: Boolean = true) {
     val alignment = if (message.senderType == SenderType.USER) Alignment.End else Alignment.Start
     val bgColor = when (message.senderType) {
         SenderType.USER -> SerenitySurface
@@ -284,16 +348,19 @@ fun ChatMessageItem(message: ChatMessage, textSize: Float) {
         if (message.senderType != SenderType.SYSTEM) {
             Surface(color = bgColor, shape = MaterialTheme.shapes.medium, modifier = Modifier.widthIn(max = 350.dp)) {
                 Column(modifier = Modifier.padding(10.dp)) {
-                    val fullText = InferenceManager.stripControlTags(message.text)
+                    val fullText = message.text
                     
-                    // Professional Thought Parser using explicit tag indices
-                    val startTag = "<think>"
-                    val endTag = "</think>"
+                    // Professional Thought Parser supporting both <think> and <thought> tags
+                    val (startTag, endTag) = when {
+                        fullText.contains("<think>", ignoreCase = true) -> "<think>" to "</think>"
+                        fullText.contains("<thought>", ignoreCase = true) -> "<thought>" to "</thought>"
+                        else -> null to null
+                    }
                     
-                    val startIndex = fullText.indexOf(startTag, ignoreCase = true)
-                    val endIndex = fullText.indexOf(endTag, ignoreCase = true)
+                    val startIndex = if (startTag != null) fullText.indexOf(startTag, ignoreCase = true) else -1
+                    val endIndex = if (endTag != null) fullText.indexOf(endTag, ignoreCase = true) else -1
                     
-                    if (startIndex != -1) {
+                    if (startTag != null && endTag != null && startIndex != -1) {
                         val thought: String
                         val answer: String
                         val isThinking: Boolean
@@ -301,7 +368,6 @@ fun ChatMessageItem(message: ChatMessage, textSize: Float) {
                         if (endIndex != -1 && endIndex > startIndex) {
                             // Fully closed block
                             thought = fullText.substring(startIndex + startTag.length, endIndex).trim()
-                            // Combine everything before <think> and after </think>
                             val before = fullText.substring(0, startIndex).trim()
                             val after = fullText.substring(endIndex + endTag.length).trim()
                             answer = if (before.isNotEmpty() && after.isNotEmpty()) "$before\n\n$after" else "$before$after"
@@ -313,8 +379,8 @@ fun ChatMessageItem(message: ChatMessage, textSize: Float) {
                             isThinking = true
                         }
                         
-                        // Show card if there's real content or we are still thinking
-                        if (thought.isNotBlank() || isThinking) {
+                        // Show card if there's real content or we are still thinking, AND setting is enabled
+                        if (showThinking && (thought.isNotBlank() || isThinking)) {
                             var expanded by remember { mutableStateOf(true) }
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.35f)),
