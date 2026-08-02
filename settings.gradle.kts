@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Serenity AI"
+rootProject.name = "SerenityDroid"
 include(":app")
 include(":serenity_npu")
