@@ -10,7 +10,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.serenitydroid.ui.SerenityHomeScreen
-import com.example.serenitydroid.ui.theme.SerenityAITheme
+import com.example.serenitydroid.ui.theme.SerenityDroidTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -24,7 +24,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             var currentScreen by remember { mutableStateOf("Home") }
             
-            SerenityAITheme {
+            SerenityDroidTheme {
                 if (currentScreen == "Home") {
                     SerenityHomeScreen(
                         viewModel = viewModel,

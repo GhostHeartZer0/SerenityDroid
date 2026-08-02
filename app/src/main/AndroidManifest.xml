@@ -10,7 +10,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
-        android:name=".SerenityAIApplication"
+        android:name=".SerenityDroidApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -18,12 +18,12 @@
         android:label="@string/app_name"
         android:roundIcon="@drawable/serenity_tridom"
         android:supportsRtl="true"
-        android:theme="@style/Theme.SerenityAI">
+        android:theme="@style/Theme.SerenityDroid">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.SerenityAI">
+            android:theme="@style/Theme.SerenityDroid">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -34,18 +34,18 @@
             android:name=".SettingsActivity"
             android:exported="false"
             android:label="@string/title_activity_settings"
-            android:theme="@style/Theme.SerenityAI" />
+            android:theme="@style/Theme.SerenityDroid" />
         <activity
             android:name=".ModelInstallerActivity"
             android:exported="false"
             android:label="@string/title_activity_settings"
-            android:theme="@style/Theme.SerenityAI" />
+            android:theme="@style/Theme.SerenityDroid" />
 
         <activity
             android:name="com.example.serenity_md_viewer.MdViewerActivity"
             android:exported="true"
             android:label="Serenity Markdown Viewer"
-            android:theme="@style/Theme.SerenityAI">
+            android:theme="@style/Theme.SerenityDroid">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.intent.action.EDIT" />

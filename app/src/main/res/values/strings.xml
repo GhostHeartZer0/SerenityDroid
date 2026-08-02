@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Serenity AI</string>
+    <string name="app_name">SerenityDroid</string>
     <string name="load">Load</string>
     <string name="begin">Begin!</string>
     <string name="halt_lvl_0">Halt (Lvl 0)</string>
@@ -19,5 +19,5 @@
     <string name="pref_summary_ephemeral_chat">History will vanish when the model is offloaded or the app closes</string>
 
     <!-- Welcome Message -->
-    <string name="welcome_message">Welcome to SerenityPC, a purely local chatbot with 5 levels! To begin, select a Persona with the slider below and click "Start Chatting".</string>
+    <string name="welcome_message">Welcome to SerenityDroid, a purely local chatbot with 5 levels! To begin, select a Persona with the slider below and click "Start Chatting".</string>
 </resources>

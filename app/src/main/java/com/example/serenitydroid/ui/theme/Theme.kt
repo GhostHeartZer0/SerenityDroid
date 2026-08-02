@@ -22,7 +22,7 @@ private val SerenityColorScheme = darkColorScheme(
 )
 
 @Composable
-fun SerenityAITheme(
+fun SerenityDroidTheme(
     content: @Composable () -> Unit
 ) {
     val view = LocalView.current

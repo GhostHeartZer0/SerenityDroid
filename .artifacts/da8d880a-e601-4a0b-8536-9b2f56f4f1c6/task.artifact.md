@@ -1,4 +1,0 @@
-- `[x]` Fix post-response crash in `LiteRtManager.kt`
-- `[x]` Implement `parseMessageWithThoughts` in `SerenityHomeScreen.kt`
-- `[x]` Update `ChatMessageItem` to use styled text
-- `[x]` Verify build and functionality
