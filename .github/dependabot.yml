@@ -9,8 +9,8 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-      time: "0600"
-      target-branch: "master"
+      time: "11:00"
+    
 
 version: 2
 updates:
@@ -18,6 +18,5 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
-      time: "06:00"
-      target-branch: "master"
+      time: "11:00"
       
