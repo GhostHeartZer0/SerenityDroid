@@ -16,6 +16,8 @@ Fully fix the thought channel
 
 ## Version 0.7.0 - 2026-08-01
 **Resolved engine support:**
+- **Build & Submodule Restoration Diagnosis**:
+  - Diagnosed `CMake` build failure (`CMakeLists.txt` missing in `app/src/main/cpp/llama.cpp`). Wiped by prior `.gitignore` untrack commit (`69b6cbb4`) and branch switch.
 - NPU (Genie X & llama.cpp)
 - GPU (OpenCL & Genie X)
 - CPU (llama.cpp & Genie X)
