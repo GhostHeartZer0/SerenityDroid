@@ -67,7 +67,7 @@ static void llama_android_log_callback(ggml_log_level level, const char * text, 
 extern "C" {
 
 JNIEXPORT jint JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_loadModel(
+Java_com_example_serenitydroid_jni_LlamaAndroid_loadModel(
         JNIEnv *env,
         jobject /* this */,
         jstring model_path_jni,
@@ -185,7 +185,7 @@ Java_com_example_serenityai_jni_LlamaAndroid_loadModel(
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_unloadModel(
+Java_com_example_serenitydroid_jni_LlamaAndroid_unloadModel(
         JNIEnv *env,
         jobject /* this */
 ) {
@@ -195,7 +195,7 @@ Java_com_example_serenityai_jni_LlamaAndroid_unloadModel(
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_deinitBackend(
+Java_com_example_serenitydroid_jni_LlamaAndroid_deinitBackend(
         JNIEnv *env,
         jobject /* this */
 ) {
@@ -206,7 +206,7 @@ Java_com_example_serenityai_jni_LlamaAndroid_deinitBackend(
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_isModelLoaded(
+Java_com_example_serenitydroid_jni_LlamaAndroid_isModelLoaded(
         JNIEnv *env,
         jobject /* this */
 ) {
@@ -215,7 +215,7 @@ Java_com_example_serenityai_jni_LlamaAndroid_isModelLoaded(
 }
 
 JNIEXPORT jint JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_getModelContextLength(
+Java_com_example_serenitydroid_jni_LlamaAndroid_getModelContextLength(
         JNIEnv *env,
         jobject /* this */
 ) {
@@ -227,7 +227,7 @@ Java_com_example_serenityai_jni_LlamaAndroid_getModelContextLength(
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_completion_1init(
+Java_com_example_serenitydroid_jni_LlamaAndroid_completion_1init(
         JNIEnv *env,
         jobject /* this */,
         jstring prompt_jni,
@@ -287,7 +287,7 @@ Java_com_example_serenityai_jni_LlamaAndroid_completion_1init(
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_completion_1loop(
+Java_com_example_serenitydroid_jni_LlamaAndroid_completion_1loop(
         JNIEnv *env,
         jobject /* this */
 ) {
@@ -343,7 +343,7 @@ Java_com_example_serenityai_jni_LlamaAndroid_completion_1loop(
 }
 
 JNIEXPORT jint JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_autoSelectLevelForPrompt(
+Java_com_example_serenitydroid_jni_LlamaAndroid_autoSelectLevelForPrompt(
         JNIEnv *env,
         jobject /* this */,
         jstring prompt_jni
@@ -352,14 +352,14 @@ Java_com_example_serenityai_jni_LlamaAndroid_autoSelectLevelForPrompt(
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_initWakeWord(
+Java_com_example_serenitydroid_jni_LlamaAndroid_initWakeWord(
         JNIEnv *env,
         jobject /* this */
 ) {
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_processAudioForWakeWord(
+Java_com_example_serenitydroid_jni_LlamaAndroid_processAudioForWakeWord(
         JNIEnv *env,
         jobject /* this */,
         jshortArray audioData
@@ -370,7 +370,7 @@ Java_com_example_serenityai_jni_LlamaAndroid_processAudioForWakeWord(
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_getBackendName(
+Java_com_example_serenitydroid_jni_LlamaAndroid_getBackendName(
         JNIEnv *env,
         jobject /* this */
 ) {
@@ -412,7 +412,7 @@ Java_com_example_serenityai_jni_LlamaAndroid_getBackendName(
 }
 
 JNIEXPORT void JNICALL
-Java_com_example_serenityai_jni_LlamaAndroid_setThreadAffinity(
+Java_com_example_serenitydroid_jni_LlamaAndroid_setThreadAffinity(
         JNIEnv * /* env */,
         jobject /* this */
 ) {

@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.system.Os
 import android.util.Log
-import com.example.serenityai.jni.LlamaAndroid
+import com.example.serenitydroid.jni.LlamaAndroid
 import com.example.serenitydroid.model.ChatMessage
 import com.example.serenitydroid.model.SenderType
 import com.geniex.sdk.GenieXSdk

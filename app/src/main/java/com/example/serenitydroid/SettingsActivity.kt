@@ -9,7 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.example.serenitydroid.ui.SettingsScreen
-import com.example.serenitydroid.ui.theme.SerenityAITheme
+import com.example.serenitydroid.ui.theme.SerenityDroidTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,7 +35,7 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SerenityAITheme {
+            SerenityDroidTheme {
                 SettingsScreen(
                     viewModel = viewModel,
                     onBack = {

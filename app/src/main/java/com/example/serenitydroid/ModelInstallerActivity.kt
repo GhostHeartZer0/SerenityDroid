@@ -48,7 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.serenitydroid.net.GoogleDriveDownloader
-import com.example.serenitydroid.ui.theme.SerenityAITheme
+import com.example.serenitydroid.ui.theme.SerenityDroidTheme
 import com.example.serenitydroid.ui.theme.SerenityAccent
 import com.example.serenitydroid.ui.theme.SerenityBackground
 import com.example.serenitydroid.ui.theme.SerenityInference
@@ -69,7 +69,7 @@ class ModelInstallerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SerenityAITheme {
+            SerenityDroidTheme {
                 ModelInstallerScreen(
                     onBack = { finish() },
                     onSelectLocalFile = { openDocument.launch(arrayOf("*/*")) },

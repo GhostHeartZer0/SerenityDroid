@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.1)
 
-project("SerenityAI")
+project("SerenityDroid")
 
 # Bring in llama.cpp
 # We want it to build as a static library so we can bundle it into our JNI library,

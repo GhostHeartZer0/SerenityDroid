@@ -16,7 +16,7 @@ This version implements key user feedback from the original, adding significant 
 |------|-------------|
 | `app/build.gradle.kts` | Includes the AndroidX Preference library for the settings screen |
 | `app/src/main/AndroidManifest.xml` | Updated to include `SettingsActivity` |
-| `app/src/main/java/com/example/serenityai/` | Core application code |
+| `app/src/main/java/com/example/serenitydroid/` | Core application code |
 
 ### Core Files
 

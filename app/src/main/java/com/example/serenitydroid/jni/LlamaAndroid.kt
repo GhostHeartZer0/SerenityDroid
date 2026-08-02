@@ -1,4 +1,4 @@
-package com.example.serenityai.jni
+package com.example.serenitydroid.jni
 
 import android.util.Log
 
