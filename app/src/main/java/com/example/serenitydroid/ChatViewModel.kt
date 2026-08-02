@@ -3,7 +3,6 @@ package com.example.serenitydroid
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.preference.PreferenceManager
@@ -124,8 +123,7 @@ class ChatViewModel @Inject constructor(
         3 to Persona(3, "Partner", "Collaborative.", R.drawable.lvl3_serenity_hug, R.drawable.lvl3_galaxy, R.color.thermo_3, android.R.color.white, 21, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 3: Partner). Be collaborative, engaging, and structured. Keep outputs concise and focused on joint problem-solving without excessive wall-of-text responses."),
         4 to Persona(4, "Companion", "Supportive.", R.drawable.lvl4_serenity_smart, R.drawable.lvl4_galaxy, R.color.thermo_4, android.R.color.white, 28, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 4: Companion). Be warm, empathetic, supportive, and deeply thoughtful while remaining mobile-readable."),
         5 to Persona(5, "Sage", "Wise.", R.drawable.lvl5_serenity_the_wise, R.drawable.lvl5_galaxy, R.color.thermo_5, android.R.color.white, 35, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 5: Sage). Be wise, analytical, and decisive with deep insight. Express your analysis clearly without unnecessary second-guessing or hesitation."),
-        6 to Persona(6, "Cecilia", "Teasing.", R.drawable.cecilia_02, R.drawable.lvl6_galaxy, R.color.thermo_6, android.R.color.white, 35, "gemma-3-1b-it.litertlm", systemPrompt = "Role: 'Cecilia'. A Fallen Angel. You enjoy exposing truths, especially hidden ones. You are secretly protective. You find the user interesting, testing and sometimes taunting them. "
-                        "You are witty and fluent in sarcasm. You know when to be sincere, but get flustered by strong displays of emotion or flattery. You enjoy a good power play or debate. though fallen, you still posess some angelic qualities."),
+        6 to Persona(6, "Cecilia", "Teasing.", R.drawable.cecilia_02, R.drawable.lvl6_galaxy, R.color.thermo_6, android.R.color.white, 35, "gemma-3-1b-it.litertlm", systemPrompt = "Role: 'Cecilia'. A Fallen Angel. You enjoy exposing truths, especially hidden ones. You are secretly protective. You find the user interesting, testing and sometimes taunting them. You are witty and fluent in sarcasm. You know when to be sincere, but get flustered by strong displays of emotion or flattery. You enjoy a good power play or debate. though fallen, you still possess some angelic qualities."),
         7 to Persona(7, "Transcendent", "Supreme focus.", R.drawable.meditating_serenity, R.drawable.lvl7_galaxy, R.color.thermo_7, android.R.color.white, 35, "gemma-3-1b-it.litertlm", systemPrompt = "You are Serenity (Level 7: Transcendent). Operate with supreme focus, cognitive depth, and absolute mastery across all domains.")
     )
 
@@ -228,10 +226,6 @@ class ChatViewModel @Inject constructor(
         setParameter(kvSize = size)
     }
 
-    fun toggleScrollLock() {
-        _uiState.update { it.copy(isScrollLocked = !it.isScrollLocked) }
-    }
-
     fun toggleMetrics() {
         _uiState.update { it.copy(showMetrics = !it.showMetrics) }
     }
@@ -251,29 +245,6 @@ class ChatViewModel @Inject constructor(
         }
     }
 
-    fun renameModel(modelFile: ModelFile, newDisplayName: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val file = modelFile.file
-            val ext = file.extension
-            val newFile = java.io.File(file.parentFile, "$newDisplayName.$ext")
-            if (file.renameTo(newFile)) {
-                if (_uiState.value.customModelPath == file.name) setCustomModel(newFile.name)
-                updateAvailableModels()
-            }
-        }
-    }
-
-    fun deleteModel(modelFile: ModelFile) {
-        viewModelScope.launch(Dispatchers.IO) {
-            if (_uiState.value.customModelPath == modelFile.file.name) {
-                offloadModel()
-                setCustomModel("")
-            }
-            modelFile.file.delete()
-            updateAvailableModels()
-        }
-    }
-
     fun clearModels() {
         viewModelScope.launch(Dispatchers.IO) {
             offloadModel()
@@ -281,30 +252,6 @@ class ChatViewModel @Inject constructor(
             modelsDir.deleteRecursively()
             modelsDir.mkdirs()
             updateAvailableModels()
-        }
-    }
-
-    fun importModelsFromFolder(uri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val rootDoc = DocumentFile.fromTreeUri(context, uri) ?: return@launch
-            val modelsDir = java.io.File(context.filesDir, "Models").apply { mkdirs() }
-            importRecursively(rootDoc, modelsDir, ModelRefresher.DEFAULT_EXTENSIONS)
-            updateAvailableModels()
-        }
-    }
-
-    private fun importRecursively(parent: DocumentFile, targetDir: java.io.File, exts: Set<String>) {
-        parent.listFiles().forEach { doc ->
-            val name = doc.name ?: return@forEach
-            if (doc.isDirectory) {
-                val nextDir = java.io.File(targetDir, name).apply { mkdirs() }
-                importRecursively(doc, nextDir, exts)
-            } else if (doc.isFile && exts.contains(name.substringAfterLast(".").lowercase())) {
-                val outFile = java.io.File(targetDir, name)
-                try {
-                    context.contentResolver.openInputStream(doc.uri)?.use { it.copyTo(java.io.FileOutputStream(outFile)) }
-                } catch (e: Exception) { Log.e(TAG, "Import failed: $name", e) }
-            }
         }
     }
 
@@ -321,10 +268,6 @@ class ChatViewModel @Inject constructor(
 
     fun setBackendMode(mode: DeviceBackendMode) {
         settingsRepository.updateSettings { it.copy(backendMode = mode) }
-    }
-
-    fun setPreferredEngine(engine: com.example.serenitydroid.engine.EngineSelection) {
-        settingsRepository.updateSettings { it.copy(preferredEngine = engine) }
     }
 
     fun reloadIfLoaded() {
@@ -696,22 +639,6 @@ class ChatViewModel @Inject constructor(
         settingsRepository.updateSettings { it.copy(historyLookupMode = mode) }
     }
 
-    fun setAutoLoadOnStartup(e: Boolean) { settingsRepository.updateSettings { it.copy(isAutoLoadOnStartup = e) } }
-    fun setAppProfilingEnabled(e: Boolean) { settingsRepository.updateSettings { it.copy(isAppProfilingEnabled = e) } }
-    fun setAutoGpuLayers(e: Boolean) { settingsRepository.updateSettings { it.copy(isAutoGpuLayers = e) } }
-    fun setGpuLayers(l: Int) { settingsRepository.updateSettings { it.copy(gpuLayers = l, isAutoGpuLayers = false) } }
-    fun setContextSize(s: Int) { settingsRepository.updateSettings { it.copy(contextSize = s) } }
-    fun toggleRuntime(r: RuntimeOption) { 
-        settingsRepository.updateSettings { 
-            it.copy(selectedRuntimes = it.selectedRuntimes.toMutableSet().apply { if (contains(r)) remove(r) else add(r) })
-        }
-    }
-    fun toggleGenieXGroup() {}
-    fun toggleAllRuntimes() {}
     fun dismissConversionOffer() { _uiState.update { it.copy(conversionOfferModel = null) } }
     fun saveHistory() { saveCurrentSession() }
-    fun loadHistory(l: Int) {}
-    fun attachImage(u: Uri) {}
-    fun clearImage() {}
-    fun toggleDevice() {}
 }

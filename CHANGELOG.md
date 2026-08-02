@@ -14,6 +14,10 @@ Clear TODO list
 Resolve multimodal and MTP
 Fully fix the thought channel
 
+## Version 0.7.1 - 2026-08-02
+- Updated lvl 6 persona to the correct one, from SerenityPC
+- excluded library components from constraints
+
 ## Version 0.7.0 - 2026-08-01
 **Resolved engine support:**
 - **Build & Submodule Restoration Diagnosis**:
@@ -22,7 +26,7 @@ Fully fix the thought channel
 - GPU (OpenCL & Genie X)
 - CPU (llama.cpp & Genie X)
 **Cleaned up tags and output**
-- Fixed regex and start/stop tag cleaning and an isue where the model would persist tags or responses.
+- Fixed regex and start/stop tag cleaning and an issue where the model would persist tags or responses.
 - Removed unused `ai-hub-apps` directory and cleaned up `.gitignore`.
 
 - **Data Escape & Ghost Mode Storage Patch**:
@@ -95,7 +99,7 @@ This release brings massive performance improvements and a much-requested overha
     - Updated `InferenceManager.kt` routing to honor `preferredEngine` overrides and route explicit `GPU`/`CPU` requests directly to native `llama.cpp` while preserving the Genie X NPU magic pipeline.
     - Aligned chat prompt tags and control tag stripping across `llama.cpp`, `LiteRT-LM`, and `Genie X`.
 - **NPU Power Unlocked**: Full support for Snapdragon 8 Elite (SM8750) and 8 Gen 3 (SM8650) via the Qualcomm AI Stack. If you're on a modern flagship, expect blazing fast, power-efficient inference that doesn't melt your battery.
-- **Smart Engine Routing**: Serenity now automatically picks the best tool for the job. Whether it's LiteRT-LM, Genie X, or llama.cpp, we route your models to the engine that will run them fastest on your specific device.
+- **Smart Engine Routing**: Serenity now automatically picks the best tool for the job. Whether it's LiteRT-LM, Genie X, or llama.cpp, we route your models to the engine that will run them the fastest on your specific device.
 - **Session History & Management**: Your chats are now saved automatically! Swipe open the new session overlay to switch between different conversations, or start fresh whenever you want.
 - **Advanced Persona Levels**: Unlocked Levels 6 (Cecilia) and 7 (Transcendent) with dedicated system prompts and a dynamic performance slider that adapts to your settings.
 - **UI Polish & Control**:
@@ -142,7 +146,7 @@ This release brings massive performance improvements and a much-requested overha
 - Updated `CMakeLists.txt` to build `llama.cpp` as shared libraries (`BUILD_SHARED_LIBS ON`), outputting `libggml-base.so`, `libggml.so`, and `libllama.so` to satisfy Genie X dynamic linking requirements.
 - Linked OpenMP flags (`OpenMP_CXX_FLAGS`) explicitly to `serenity_llama` target in `CMakeLists.txt`.
 - Added packaging rules in `app/build.gradle.kts` (`copyQnnLibs`, `extractAarJniLibs`, and `jniLibs.pickFirsts`) to extract `liblitert_dispatch.so` and `liblitert_lm_dispatch.so` directly from AAR dependencies during Gradle builds.
-- Refined native library pre-loading order in `InferenceManager.kt` (`omp`, `ggml-base`, `ggml`, `llama`, `litert_dispatch`, `geniex_plugin_llama_cpp`) to resolve OpenMP `__kmpc_dispatch_deinit` symbol lookup errors.
+- Refined native library preloading order in `InferenceManager.kt` (`omp`, `ggml-base`, `ggml`, `llama`, `litert_dispatch`, `geniex_plugin_llama_cpp`) to resolve OpenMP `__kmpc_dispatch_deinit` symbol lookup errors.
 - Added `LOGCAT_RECOMMENDED_FILTER` constant in `InferenceManager.kt` (`adb logcat -s InferenceManager:V GenieXSdk:V LlamaNative:V *:S`) for noise reduction.
 
 ## Version 0.5.2 Alpha - 2026-07-29
@@ -232,7 +236,7 @@ This release brings massive performance improvements and a much-requested overha
 - Added AUTO RAM mode for GPU Offload Layers in `ChatViewModel.kt` and `SettingsScreen.kt`, querying system RAM via `ActivityManager.MemoryInfo` to auto-calculate optimal GPU layer offload.
 - Added System RAM stats display (`Total GB / Avail GB`) in `SettingsScreen.kt`.
 - Replaced legacy `ModelInstallerActivity.kt` layout with full Jetpack Compose UI including top margin, Google Drive downloader input, live progress counter (`MB / MB`), and local file picker.
-- Added 2048 step increments to Context Window slider in `SettingsScreen.kt`.
+- Added 2048-step increments to Context Window slider in `SettingsScreen.kt`.
 - Added `OpenableColumns.DISPLAY_NAME` resolution in `ModelInstallerActivity.kt` to preserve full filenames when importing local `.litertlm` files.
 - Added `DeviceBackendMode` hardware acceleration selector (`AUTO`, `NPU`, `GPU`, `CPU`) with automatic fallback priority: **NPU > GPU > CPU**.
 - Added NPU hardware native library bindings (`context.applicationInfo.nativeLibraryDir`) for AICore / NPU hardware execution in `LiteRtManager.kt`.
