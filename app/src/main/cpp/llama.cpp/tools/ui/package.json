@@ -103,6 +103,7 @@
 		"workbox-window": "^7.4.1"
 	},
 	"overrides": {
-		"cookie": "1.1.1"
+		"hono": "4.12.34",
+		"cookie": "0.7.1"
 	}
 }
