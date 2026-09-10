@@ -253,7 +253,7 @@ dependencies {
     implementation(libs.qnn.litert.delegate)
 
     // LiteRT-LM for on-device inference
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.14.0")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.15.0")
     implementation("com.google.ai.edge.litert:litert:2.1.6")
     implementation("com.google.ai.edge.litert:litert-gpu:1.4.2")
 
@@ -266,7 +266,7 @@ dependencies {
     implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.activity.compose)
-    implementation("io.coil-kt:coil-compose:2.6.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
 
     // Android Studio Preview support
     debugImplementation(libs.ui.tooling)
