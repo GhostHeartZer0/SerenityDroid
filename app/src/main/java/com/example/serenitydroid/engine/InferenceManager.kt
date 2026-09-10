@@ -73,6 +73,7 @@ data class ModelConfig(
     val enableMtp: Boolean = false,
     val enableSplitKv: Boolean = true,
     val enableAttentionCaching: Boolean = true,
+    val enableFlashAttn: Boolean = true,
     val sequenceBatchSize: Int = 1,
     val kvCacheSize: Int = 4096,
     val bufferSize: Int = 1024,
@@ -485,7 +486,7 @@ class InferenceManager(
         
         val hintsToTry = when (backendMode) {
             DeviceBackendMode.NPU -> listOf("HTP", "CPU")
-            DeviceBackendMode.GPU -> listOf("OpenCL", "CPU")
+            DeviceBackendMode.GPU -> listOf("OpenCL", "CPU") // Temporarily disabled Vulkan until SPIRV-Headers are bundled
             DeviceBackendMode.CPU -> listOf("CPU")
             DeviceBackendMode.AUTO -> listOf("HTP", "OpenCL", "CPU")
         }
@@ -502,6 +503,7 @@ class InferenceManager(
                 null,
                 config.kvQuantK.value,
                 config.kvQuantV.value,
+                if (config.enableFlashAttn) 1 else 0,
                 backendHint
             )
             if (res == 0) break

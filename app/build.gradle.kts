@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.serenitydroid"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.serenitydroid"
@@ -53,10 +53,9 @@ android {
 
     kotlin {
         jvmToolchain(21)
-        target {
-            compilerOptions {
-                optIn.add("kotlin.RequiresOptIn")
-            }
+        compilerOptions {
+            optIn.add("kotlin.RequiresOptIn")
+            languageVersion.set(org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_0)
         }
     }
 
