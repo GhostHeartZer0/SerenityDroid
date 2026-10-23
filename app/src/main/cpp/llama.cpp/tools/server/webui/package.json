@@ -78,7 +78,7 @@
 		"vitest-browser-svelte": "^3.0.0"
 	},
 	"dependencies": {
-		"@modelcontextprotocol/sdk": "^1.32.1",
+		"@modelcontextprotocol/sdk": "^1.32.0",
 		"highlight.js": "^11.11.1",
 		"mode-watcher": "^1.1.0",
 		"pdfjs-dist": "^6.2.108",
