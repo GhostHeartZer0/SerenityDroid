@@ -173,6 +173,18 @@ fun HardwareTab(viewModel: ChatViewModel, state: com.example.serenitydroid.UiSta
         )
     }
 
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text("Flash Attention", color = Color.White)
+            Text("Reduces memory usage during generation", style = MaterialTheme.typography.bodySmall, color = SerenityInference)
+        }
+        Switch(
+            checked = state.enableFlashAttn,
+            onCheckedChange = { viewModel.setParameter(flashAttn = it) },
+            colors = SwitchDefaults.colors(checkedTrackColor = SerenityAccent)
+        )
+    }
+
     ParameterSlider(
         label = "KV Cache Size",
         value = state.kvCacheSize.toFloat(),

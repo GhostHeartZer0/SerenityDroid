@@ -11,10 +11,20 @@ set(GGML_STATIC ON CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(LLAMA_BUILD_SERVER OFF CACHE BOOL "" FORCE)
-set(GGML_VULKAN OFF CACHE BOOL "" FORCE)
 
 # Ensure OpenMP is linked correctly
 find_package(OpenMP REQUIRED)
+
+# Vulkan Support
+if (GGML_VULKAN)
+    find_library(VULKAN_LIB vulkan)
+    if (VULKAN_LIB)
+        message(STATUS "Found Vulkan library: ${VULKAN_LIB}")
+        set(Vulkan_LIBRARY "${VULKAN_LIB}")
+    else()
+        message(FATAL_ERROR "Vulkan library not found but GGML_VULKAN is ON")
+    endif()
+endif()
 
 # OpenCL Support for Android (Snapdragon/Adreno)
 if (GGML_OPENCL)

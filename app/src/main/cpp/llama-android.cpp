@@ -77,6 +77,7 @@ Java_com_example_serenitydroid_jni_LlamaAndroid_loadModel(
         jstring mmproj_path_jni,
         jint kv_quant_k,
         jint kv_quant_v,
+        jint flash_attn,
         jstring backend_hint_jni
 ) {
     std::lock_guard<std::mutex> lock(g_mutex);
@@ -87,7 +88,10 @@ Java_com_example_serenitydroid_jni_LlamaAndroid_loadModel(
 
     // Handle backend hint
     const char *backend_hint = backend_hint_jni ? env->GetStringUTFChars(backend_hint_jni, nullptr) : nullptr;
-    bool use_accel = (backend_hint && n_gpu_layers > 0 && (strcmp(backend_hint, "OpenCL") == 0 || strcmp(backend_hint, "HTP") == 0));
+    bool use_accel = (backend_hint && n_gpu_layers > 0 &&
+                     (strcmp(backend_hint, "OpenCL") == 0 ||
+                      strcmp(backend_hint, "HTP") == 0 ||
+                      strcmp(backend_hint, "Vulkan") == 0));
 
     llama_log_set(llama_android_log_callback, nullptr);
 
@@ -163,12 +167,14 @@ Java_com_example_serenitydroid_jni_LlamaAndroid_loadModel(
     lparams.n_ctx = (uint32_t)n_context;
     lparams.type_k = (enum ggml_type)kv_quant_k;
     lparams.type_v = (enum ggml_type)kv_quant_v;
+    lparams.flash_attn_type = (enum llama_flash_attn_type)flash_attn;
 
     ANDROID_LOG_DEBUG((std::string("Initializing context with n_ctx=") + std::to_string(lparams.n_ctx) +
                        ", n_threads=" + std::to_string(lparams.n_threads) +
                        ", n_gpu_layers=" + std::to_string(n_gpu_layers) +
                        ", type_k=" + std::to_string(kv_quant_k) +
-                       ", type_v=" + std::to_string(kv_quant_v)).c_str());
+                       ", type_v=" + std::to_string(kv_quant_v) +
+                       ", flash_attn=" + std::to_string(flash_attn)).c_str());
 
     g_ctx = llama_init_from_model(g_model, lparams);
 

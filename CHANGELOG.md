@@ -14,6 +14,9 @@ Clear TODO list
 Resolve multimodal and MTP
 Fully fix the thought channel
 
+## Version 0.7.2 - 2026-08-TBD
+- Fix GPU use crash
+
 ## Version 0.7.1 - 2026-08-02
 - Updated lvl 6 persona to the correct one, from SerenityPC
 - excluded library components from constraints
