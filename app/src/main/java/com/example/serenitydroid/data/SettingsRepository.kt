@@ -33,6 +33,7 @@ data class SettingsData(
     val enableMtp: Boolean = false,
     val enableSplitKv: Boolean = true,
     val enableAttentionCaching: Boolean = true,
+    val enableFlashAttn: Boolean = true,
     val sequenceBatchSize: Int = 1,
     val kvCacheSize: Int = 2048,
     val bufferSize: Int = 1024,
@@ -90,6 +91,7 @@ class SettingsRepository @Inject constructor(
             enableMtp = prefs.getBoolean("enable_mtp", false),
             enableSplitKv = prefs.getBoolean("enable_split_kv", true),
             enableAttentionCaching = prefs.getBoolean("enable_attention_caching", true),
+            enableFlashAttn = prefs.getBoolean("enable_flash_attn", true),
             sequenceBatchSize = prefs.getInt("sequence_batch_size", 1),
             kvCacheSize = prefs.getInt("kv_cache_size", 2048),
             bufferSize = prefs.getInt("buffer_size", 1024),
@@ -137,6 +139,7 @@ class SettingsRepository @Inject constructor(
             putBoolean("enable_mtp", data.enableMtp)
             putBoolean("enable_split_kv", data.enableSplitKv)
             putBoolean("enable_attention_caching", data.enableAttentionCaching)
+            putBoolean("enable_flash_attn", data.enableFlashAttn)
             putInt("sequence_batch_size", data.sequenceBatchSize)
             putInt("kv_cache_size", data.kvCacheSize)
             putInt("buffer_size", data.bufferSize)

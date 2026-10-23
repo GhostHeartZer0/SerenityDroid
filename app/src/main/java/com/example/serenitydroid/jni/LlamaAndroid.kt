@@ -22,6 +22,7 @@ object LlamaAndroid {
         mmprojPath: String? = null,
         kvQuantK: Int = 1,
         kvQuantV: Int = 1,
+        flashAttn: Int = 0,
         backendHint: String? = null
     ): Int
     external fun unloadModel()
