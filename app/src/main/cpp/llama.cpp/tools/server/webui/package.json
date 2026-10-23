@@ -27,7 +27,7 @@
 		"@eslint/compat": "^2.1.0",
 		"@eslint/js": "^10.0.1",
 		"@internationalized/date": "^3.12.3",
-		"@lucide/svelte": "^1.28.0",
+		"@lucide/svelte": "^1.30.0",
 		"@playwright/test": "^1.62.1",
 		"@storybook/addon-a11y": "^10.5.7",
 		"@storybook/addon-docs": "^10.5.5",
