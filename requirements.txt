@@ -6,7 +6,7 @@ sentencepiece==0.2.2
 idna==3.19
 pytest==9.1.1
 setuptools==83.0.0
-filelock==3.32.2
+filelock==3.32.3
 Jinja2==3.1.6
 requests==2.34.2
 tqdm==4.70.0
