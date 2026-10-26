@@ -253,7 +253,7 @@ dependencies {
     implementation(libs.qnn.litert.delegate)
 
     // LiteRT-LM for on-device inference
-    implementation("com.google.ai.edge.litertlm:litertlm-android:0.15.0")
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.1")
     implementation("com.google.ai.edge.litert:litert:2.1.6")
     implementation("com.google.ai.edge.litert:litert-gpu:1.4.2")
 
