@@ -1,6 +1,6 @@
 [versions]
 activityKtxVersion = "1.11.0"
-agp = "9.3.1"
+agp = "9.4.1"
 appcompatVersion = "1.7.1"
 constraintlayoutVersion = "2.2.2"
 glide = "5.0.9"
