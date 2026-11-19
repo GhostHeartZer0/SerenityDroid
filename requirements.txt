@@ -1,7 +1,7 @@
 transformers==5.15.0
 urllib3==2.8.0
 torch==2.13.0
-protobuf==7.35.1
+protobuf==7.36.2
 sentencepiece==0.2.2
 idna==3.19
 pytest==9.1.1
