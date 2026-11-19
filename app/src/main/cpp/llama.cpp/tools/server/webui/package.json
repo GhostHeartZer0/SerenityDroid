@@ -41,7 +41,7 @@
 		"@tailwindcss/typography": "^0.5.20",
 		"@tailwindcss/vite": "^4.3.3",
 		"@types/node": "^26.1.2",
-		"@vitest/browser": "^4.1.11",
+		"@vitest/browser": "^5.0.5",
 		"@vitest/coverage-v8": "^4.1.11",
 		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
